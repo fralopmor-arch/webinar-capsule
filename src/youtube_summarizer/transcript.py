@@ -64,14 +64,22 @@ def transcribe_audio_fallback(url: str) -> dict:
         raise ImportError("yt-dlp and faster-whisper are required for fallback. Run: uv add yt-dlp faster-whisper")
 
     with tempfile.TemporaryDirectory() as tmpdir:
-        # Check if user provided YouTube cookies via environment variable
+        # Support YouTube cookies via file path (YOUTUBE_COOKIES_FILE) or raw cookie text string (YOUTUBE_COOKIES)
         cookies_file = os.getenv("YOUTUBE_COOKIES_FILE")
+        cookies_text = os.getenv("YOUTUBE_COOKIES")
         
+        if not cookies_file and cookies_text:
+            temp_cookie_path = os.path.join(tmpdir, "youtube_cookies.txt")
+            with open(temp_cookie_path, "w", encoding="utf-8") as f:
+                f.write(cookies_text)
+            cookies_file = temp_cookie_path
+
         # Array of fallback player clients for yt-dlp to bypass YouTube bot blocks
         client_options = [
             ['android_creator', 'android'],
             ['ios', 'mweb'],
-            ['tvhtml5', 'web']
+            ['tvhtml5', 'web'],
+            ['web']
         ]
         
         download_success = False
@@ -100,6 +108,7 @@ def transcribe_audio_fallback(url: str) -> dict:
             except Exception as e:
                 last_error = e
                 continue
+
                 
         if not download_success:
             raise RuntimeError(f"Failed to download audio: {last_error}")
