@@ -93,7 +93,7 @@ def transcribe_audio_fallback(url: str) -> dict:
         
         for clients in client_options:
             ydl_opts = {
-                'format': 'bestaudio/best',
+                'format': 'bestaudio/bestaudio*/best',
                 'outtmpl': os.path.join(tmpdir, 'audio.%(ext)s'),
                 'quiet': True,
                 'no_warnings': True,
@@ -103,6 +103,7 @@ def transcribe_audio_fallback(url: str) -> dict:
                     }
                 }
             }
+
             if cookies_file and os.path.exists(cookies_file):
                 ydl_opts['cookiefile'] = cookies_file
                 
