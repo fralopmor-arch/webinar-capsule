@@ -1,0 +1,539 @@
+{
+	"nodes": [
+		{
+			"id": "canvas-errors",
+			"type": "text",
+			"text": "## Errors\n✓ None",
+			"x": -540,
+			"y": -750,
+			"width": 380,
+			"height": 200,
+			"color": "1"
+		},
+		{
+			"id": "legend",
+			"type": "text",
+			"text": "## Legend\n🔴 **Red** = To Do (ready)\n⬜ **Gray** = Blocked\n🟠 **Orange** = Doing\n🔵 **Cyan** = Ready to review\n🟢 **Green** = Done\n🟣 **Purple** = Proposed by agent",
+			"x": -540,
+			"y": -310,
+			"width": 380,
+			"height": 230,
+			"color": "0"
+		},
+		{
+			"id": "canvas-warnings",
+			"type": "text",
+			"text": "## Warnings\n✓ None",
+			"x": -540,
+			"y": -530,
+			"width": 380,
+			"height": 200,
+			"color": "3"
+		},
+		{
+			"id": "group-enviro",
+			"type": "group",
+			"x": 0,
+			"y": 0,
+			"width": 380,
+			"height": 700,
+			"label": "Environment Setup"
+		},
+		{
+			"id": "group-transc",
+			"type": "group",
+			"x": 440,
+			"y": 0,
+			"width": 380,
+			"height": 700,
+			"label": "Transcript Extraction"
+		},
+		{
+			"id": "group-textpr",
+			"type": "group",
+			"x": 880,
+			"y": 0,
+			"width": 380,
+			"height": 700,
+			"label": "Text Processing"
+		},
+		{
+			"id": "group-llmint",
+			"type": "group",
+			"x": 1320,
+			"y": 0,
+			"width": 380,
+			"height": 700,
+			"label": "LLM Integration"
+		},
+		{
+			"id": "group-cliint",
+			"type": "group",
+			"x": 1760,
+			"y": 0,
+			"width": 380,
+			"height": 700,
+			"label": "CLI Interface"
+		},
+		{
+			"id": "group-testin",
+			"type": "group",
+			"x": 2200,
+			"y": 0,
+			"width": 380,
+			"height": 760,
+			"label": "Testing & QA"
+		},
+		{
+			"id": "93924297",
+			"type": "text",
+			"text": "## ES-01 Initialize Project with uv\nCreate project directory with uv init. Configure pyproject.toml with metadata (name, version, description, requires-python >=3.13). Add core dependencies: youtube-transcript-api, google-genai, python-dotenv. Add dev dependencies: pytest. Verify uv lock generates successfully.\\n\\nInput: Empty directory\\nDeliverable: Working pyproject.toml, uv.lock, .python-version",
+			"x": 20,
+			"y": 40,
+			"width": 280,
+			"height": 160,
+			"color": "6"
+		},
+		{
+			"id": "1613556a",
+			"type": "text",
+			"text": "## ES-02 Configure Environment & API Keys\nCreate .env file with GEMINI_API_KEY placeholder. Create .env.example as a template for contributors. Implement src/youtube_summarizer/config.py: load_dotenv() once, validate GEMINI_API_KEY is set (raise ValueError if missing). Create .gitignore with entries for .env, __pycache__/, .venv/, *.pyc, transcripts/, summaries/.\\n\\nInput: Initialized project (ES-01)\\nDeliverable: config.py, .env, .env.example, .gitignore",
+			"x": 20,
+			"y": 220,
+			"width": 280,
+			"height": 160,
+			"color": "6"
+		},
+		{
+			"id": "f0f974e4",
+			"type": "text",
+			"text": "## ES-03 Create Project Structure (src layout)\nScaffold the full src-layout directory structure: src/youtube_summarizer/ with __init__.py, config.py, transcript.py, sanitizer.py, summarizer.py, storage.py, cli.py. Create tests/ directory with conftest.py. Create transcripts/ and summaries/ output directories. Add README.md with project description and setup instructions.\\n\\nInput: Initialized project (ES-01)\\nDeliverable: Complete directory skeleton with empty module files",
+			"x": 20,
+			"y": 400,
+			"width": 280,
+			"height": 160,
+			"color": "6"
+		},
+		{
+			"id": "615d9965",
+			"type": "text",
+			"text": "## TE-01 Implement URL Parsing & Video ID Validation\nBuild a utility function that accepts various YouTube URL formats (youtube.com/watch?v=, youtu.be/, youtube.com/embed/, etc.) and extracts the 11-character video ID. Validate the ID format with regex. Return clear error for invalid URLs. Handle edge cases: URLs with timestamps, playlists, extra query params.\\n\\nInput: Raw YouTube URL string\\nDeliverable: parse_video_id(url) function in transcript.py",
+			"x": 460,
+			"y": 40,
+			"width": 280,
+			"height": 160,
+			"color": "6"
+		},
+		{
+			"id": "25f5270a",
+			"type": "text",
+			"text": "## TE-02 Implement Primary Transcript Retrieval\nBuild the main transcript extraction function using youtube-transcript-api. Use list_transcripts() to enumerate available transcripts, then find_transcript() with prioritized language list ['es','en','fr','de','it']. Handle exceptions: TranscriptsDisabled, NoTranscriptFound, VideoUnavailable. IMPORTANT: Fix the double-call bug from the reference code — call find_transcript ONCE with the language priority list. Return structured result with transcript text + metadata (language, is_generated).\\n\\nInput: Validated video ID (from TE-01)\\nDeliverable: get_transcript(video_id) function in transcript.py",
+			"x": 460,
+			"y": 220,
+			"width": 280,
+			"height": 160,
+			"color": "6"
+		},
+		{
+			"id": "e67de607",
+			"type": "text",
+			"text": "## TE-03 Implement Whisper Fallback for No-Caption Videos\nBuild a fallback path for videos without any captions. Step 1: Use yt-dlp to download audio-only (bestaudio/best, convert to mp3 via FFmpegExtractAudio). Step 2: Use faster-whisper with 'base' model (CPU, int8) to transcribe. Add uv optional dependencies: yt-dlp, faster-whisper. Warn user about processing time (5-15 min/hour of video). Detect FFmpeg availability and show clear error if missing.\\n\\nInput: YouTube URL (when primary extraction fails)\\nDeliverable: transcribe_audio_fallback(url) function in transcript.py",
+			"x": 460,
+			"y": 400,
+			"width": 280,
+			"height": 160,
+			"color": "6"
+		},
+		{
+			"id": "050b8871",
+			"type": "text",
+			"text": "## TP-01 Implement Text Sanitizer\nBuild a sanitizer module that cleans raw transcript text: remove YouTube artifacts (e.g. [Music], [Applause], [Laughter] tags), normalize Unicode characters, collapse multiple whitespace/newlines, strip leading/trailing whitespace, optionally remove filler words. Accept raw transcript string, return cleaned string.\\n\\nInput: Raw transcript text from youtube-transcript-api\\nDeliverable: sanitize_transcript(text) function in sanitizer.py",
+			"x": 900,
+			"y": 40,
+			"width": 280,
+			"height": 160,
+			"color": "6"
+		},
+		{
+			"id": "2003e657",
+			"type": "text",
+			"text": "## TP-02 Implement Storage Module (File I/O)\nBuild storage.py to handle all file operations. Save raw transcripts to transcripts/{video_id}.txt. Save summaries to summaries/{video_id}_summary.txt. Auto-create output directories if they don't exist (pathlib.mkdir(parents=True, exist_ok=True)). Add load functions to check if a transcript/summary already exists (cache check to avoid re-processing). Include metadata header in saved files (video ID, timestamp, language).\\n\\nInput: Transcript text + video metadata\\nDeliverable: save_transcript(), save_summary(), load_transcript(), transcript_exists() in storage.py",
+			"x": 900,
+			"y": 220,
+			"width": 280,
+			"height": 160,
+			"color": "6"
+		},
+		{
+			"id": "a3983dea",
+			"type": "text",
+			"text": "## LI-01 Implement Gemini API Client\nBuild summarizer.py with a GeminiClient class or function. Initialize google.genai.Client using GEMINI_API_KEY from config.py. Select model 'gemini-2.5-flash' as default (configurable). Implement generate_summary(transcript_text) that sends transcript + system instruction to Gemini and returns the summary text. Handle API errors: catch google.api_core.exceptions for 429, 500, 503.\\n\\nInput: Cleaned transcript text, API key from config\\nDeliverable: GeminiSummarizer class in summarizer.py",
+			"x": 1340,
+			"y": 40,
+			"width": 280,
+			"height": 160,
+			"color": "6"
+		},
+		{
+			"id": "c0251f59",
+			"type": "text",
+			"text": "## LI-02 Design & Optimize Summarization Prompt\nCraft and test the system instruction and user prompt for Gemini. System instruction: define the AI as a YouTube video summarizer. User prompt template: place transcript FIRST, then summarization instructions AFTER (per Gemini best practices for long context). Define output structure: title, key topics, bullet-point summary, key takeaways. Test with 3-5 real transcripts of varying lengths and topics to validate quality.\\n\\nInput: Working Gemini client (LI-01)\\nDeliverable: Tested prompt template in summarizer.py, example outputs",
+			"x": 1340,
+			"y": 220,
+			"width": 280,
+			"height": 160,
+			"color": "6"
+		},
+		{
+			"id": "7f086a88",
+			"type": "text",
+			"text": "## LI-03 Implement Retry Logic with Exponential Backoff\nAdd robust retry handling to the Gemini client. Implement exponential backoff with jitter: attempt 1 immediate, attempt 2 wait 2s+random(0,1s), attempt 3 wait 4s+random(0,2s), attempt 4 fail. Catch 429 RESOURCE_EXHAUSTED (rate limit) and 500/503 (server errors). Log each retry attempt. Make max_retries and base_delay configurable. Use tenacity library or implement manually.\\n\\nInput: Working Gemini client (LI-01)\\nDeliverable: Retry-wrapped API call in summarizer.py",
+			"x": 1340,
+			"y": 400,
+			"width": 280,
+			"height": 160,
+			"color": "6"
+		},
+		{
+			"id": "6e193a34",
+			"type": "text",
+			"text": "## CI-01 Implement argparse CLI Entry Point\nBuild cli.py as the main entry point using argparse. Define arguments: positional 'url' (YouTube URL), optional --output-dir (default: summaries/), --model (default: gemini-2.5-flash), --language (default: es,en,fr,de,it), --no-save (skip saving to disk), --verbose (enable debug logging). Wire up to main() function. Add entry point in pyproject.toml [project.scripts].\\n\\nInput: Project structure (ES-03)\\nDeliverable: Working CLI skeleton in cli.py, entry point config",
+			"x": 1780,
+			"y": 40,
+			"width": 280,
+			"height": 160,
+			"color": "6"
+		},
+		{
+			"id": "32747e8e",
+			"type": "text",
+			"text": "## CI-02 Implement End-to-End Orchestration Pipeline\nBuild the main orchestration function that wires all modules together: 1) Parse URL (TE-01), 2) Check if transcript already cached (TP-02), 3) Extract transcript with fallback chain (TE-02/TE-03), 4) Sanitize text (TP-01), 5) Save raw transcript (TP-02), 6) Send to Gemini for summarization (LI-02), 7) Save and display summary. Handle all errors gracefully with user-friendly messages. Add progress indicators (print statements or simple spinners).\\n\\nInput: All core modules completed\\nDeliverable: run_pipeline(url) function in cli.py",
+			"x": 1780,
+			"y": 220,
+			"width": 280,
+			"height": 160,
+			"color": "6"
+		},
+		{
+			"id": "979a011b",
+			"type": "text",
+			"text": "## CI-03 Add Progress Feedback & Rich Error Display\nEnhance CLI UX with: progress messages for each pipeline step (Extracting transcript... Sanitizing... Summarizing...), elapsed time display, colored output using ANSI codes or rich library (optional), structured error messages with suggestions (e.g. 'No captions found. Use --whisper-fallback to transcribe audio.'). Add --quiet flag to suppress progress output.\\n\\nInput: Working pipeline (CI-02)\\nDeliverable: Enhanced cli.py with UX polish",
+			"x": 1780,
+			"y": 400,
+			"width": 280,
+			"height": 160,
+			"color": "6"
+		},
+		{
+			"id": "c08eca15",
+			"type": "text",
+			"text": "## T&Q-01 T&Q-01 T&Q-01 T&Q-01 T&Q-01 T&Q-01 T&Q-01 T&Q-01 T&Q-01 T&Q-01 T&Q-01 T&Q-01 T&Q-01 T&Q-01 T&Q-01 T&Q-01 T&Q-01 T&Q-01 T&Q-01 T&Q-01 Unit Tests: Transcript Extraction & URL Parsing\nWrite pytest tests for transcript.py: test parse_video_id() with valid URLs (youtube.com/watch, youtu.be, embed), invalid URLs, and edge cases (timestamps, playlists). Mock youtube-transcript-api to test get_transcript() with successful response, TranscriptsDisabled, NoTranscriptFound, VideoUnavailable. Test language fallback ordering.\\n\\nInput: Completed transcript.py (TE-01, TE-02)\\nDeliverable: tests/test_transcript.py with >90% coverage of transcript.py",
+			"x": 2220,
+			"y": 40,
+			"width": 280,
+			"height": 160,
+			"color": "6"
+		},
+		{
+			"id": "41361515",
+			"type": "text",
+			"text": "## T&Q-01 T&Q-01 T&Q-01 T&Q-01 T&Q-01 T&Q-01 T&Q-01 T&Q-01 T&Q-01 T&Q-01 T&Q-01 T&Q-01 T&Q-01 T&Q-01 T&Q-01 T&Q-01 T&Q-01 T&Q-01 T&Q-01 Unit Tests: Sanitizer & Storage\nWrite pytest tests for sanitizer.py: test removal of [Music]/[Applause] tags, whitespace normalization, Unicode handling, empty input, very long input. Write tests for storage.py: test save/load roundtrip, directory auto-creation, transcript_exists() cache check, metadata header format. Use tmp_path fixture for filesystem tests.\\n\\nInput: Completed sanitizer.py and storage.py (TP-01, TP-02)\\nDeliverable: tests/test_sanitizer.py, tests/test_storage.py",
+			"x": 2220,
+			"y": 220,
+			"width": 280,
+			"height": 160,
+			"color": "6"
+		},
+		{
+			"id": "13b62c21",
+			"type": "text",
+			"text": "## T&Q-01 T&Q-01 T&Q-01 T&Q-01 T&Q-01 T&Q-01 T&Q-01 T&Q-01 T&Q-01 T&Q-01 T&Q-01 T&Q-01 T&Q-01 T&Q-01 T&Q-01 T&Q-01 T&Q-01 T&Q-01 Unit Tests: Gemini Summarizer & Retry Logic\nWrite pytest tests for summarizer.py: mock google.genai.Client to test successful summarization, prompt formatting, retry behavior on 429/500 errors, max retry exhaustion. Verify exponential backoff timing. Test configurable model selection. Use unittest.mock.patch for API mocking.\\n\\nInput: Completed summarizer.py (LI-01, LI-02, LI-03)\\nDeliverable: tests/test_summarizer.py",
+			"x": 2220,
+			"y": 400,
+			"width": 280,
+			"height": 160,
+			"color": "6"
+		},
+		{
+			"id": "e5f549d2",
+			"type": "text",
+			"text": "## T&Q-01 T&Q-01 T&Q-01 T&Q-01 T&Q-01 T&Q-01 T&Q-01 T&Q-01 T&Q-01 T&Q-01 T&Q-01 T&Q-01 T&Q-01 T&Q-01 T&Q-01 T&Q-01 T&Q-01 Integration Test: Full Pipeline End-to-End\nWrite integration tests that exercise the complete pipeline: URL input -> transcript extraction -> sanitization -> save -> summarization -> output. Test with 2-3 real YouTube video URLs (short videos, <5 min). Verify: transcript .txt file created, summary generated and saved, output matches expected structure. Test error paths: invalid URL, private video. Mark tests with @pytest.mark.integration (requires network + API key).\\n\\nInput: Working pipeline (CI-02)\\nDeliverable: tests/test_integration.py",
+			"x": 2220,
+			"y": 580,
+			"width": 280,
+			"height": 160,
+			"color": "6"
+		},
+		{
+			"id": "group-qualit",
+			"type": "group",
+			"x": 2640,
+			"y": 0,
+			"width": 380,
+			"height": 940,
+			"label": "Quality Assurance"
+		},
+		{
+			"id": "d7a459f8",
+			"type": "text",
+			"text": "## QA-01 Unit Tests for Transcript Extraction\nWrite pytest tests for transcript.py: test parse_video_id() with valid URLs (youtube.com/watch, youtu.be, embed), invalid URLs, and edge cases (timestamps, playlists). Mock youtube-transcript-api to test get_transcript() with successful response, TranscriptsDisabled, NoTranscriptFound, VideoUnavailable. Test language fallback ordering.\\n\\nInput: Completed transcript.py (TE-01, TE-02)\\nDeliverable: tests/test_transcript.py with >90% coverage",
+			"x": 2660,
+			"y": 40,
+			"width": 280,
+			"height": 160,
+			"color": "6"
+		},
+		{
+			"id": "54f07366",
+			"type": "text",
+			"text": "## QA-02 Unit Tests for Sanitizer and Storage\nWrite pytest tests for sanitizer.py: test removal of [Music]/[Applause] tags, whitespace normalization, Unicode handling, empty input, very long input. Write tests for storage.py: test save/load roundtrip, directory auto-creation, transcript_exists() cache check, metadata header format. Use tmp_path fixture for filesystem tests.\\n\\nInput: Completed sanitizer.py and storage.py (TP-01, TP-02)\\nDeliverable: tests/test_sanitizer.py, tests/test_storage.py",
+			"x": 2660,
+			"y": 220,
+			"width": 280,
+			"height": 160,
+			"color": "6"
+		},
+		{
+			"id": "565da23f",
+			"type": "text",
+			"text": "## QA-03 Unit Tests for Gemini Summarizer\nWrite pytest tests for summarizer.py: mock google.genai.Client to test successful summarization, prompt formatting, retry behavior on 429/500 errors, max retry exhaustion. Verify exponential backoff timing. Test configurable model selection. Use unittest.mock.patch for API mocking.\\n\\nInput: Completed summarizer.py (LI-01, LI-02, LI-03)\\nDeliverable: tests/test_summarizer.py",
+			"x": 2660,
+			"y": 400,
+			"width": 280,
+			"height": 160,
+			"color": "6"
+		},
+		{
+			"id": "2393e0f3",
+			"type": "text",
+			"text": "## QA-04 Integration Test Full Pipeline\nWrite integration tests that exercise the complete pipeline: URL input -> transcript extraction -> sanitization -> save -> summarization -> output. Test with 2-3 real YouTube video URLs (short videos under 5 min). Verify: transcript .txt file created, summary generated and saved, output matches expected structure. Test error paths: invalid URL, private video. Mark tests with @pytest.mark.integration (requires network and API key).\\n\\nInput: Working pipeline (CI-02)\\nDeliverable: tests/test_integration.py",
+			"x": 2660,
+			"y": 580,
+			"width": 280,
+			"height": 160,
+			"color": "6"
+		},
+		{
+			"id": "1a3f7fac",
+			"type": "text",
+			"text": "## QA-05 Edge Case Testing and Documentation\nTest edge cases: videos without any captions (verify fallback or clear error), very long videos (2h+), videos in non-Latin scripts, videos with only auto-generated captions, playlist URLs, live stream URLs. Update README.md with: installation instructions (uv sync), usage examples, configuration guide, troubleshooting section. Add --help examples to README.\\n\\nInput: All tests passing (QA-01 through QA-04)\\nDeliverable: Comprehensive test coverage, production-ready README.md",
+			"x": 2660,
+			"y": 760,
+			"width": 280,
+			"height": 160,
+			"color": "6"
+		}
+	],
+	"edges": [
+		{
+			"id": "edge-001",
+			"fromNode": "1613556a",
+			"fromSide": "top",
+			"toNode": "93924297",
+			"toSide": "bottom"
+		},
+		{
+			"id": "edge-002",
+			"fromNode": "f0f974e4",
+			"fromSide": "top",
+			"toNode": "93924297",
+			"toSide": "bottom"
+		},
+		{
+			"id": "edge-003",
+			"fromNode": "f0f974e4",
+			"fromSide": "right",
+			"toNode": "25f5270a",
+			"toSide": "left"
+		},
+		{
+			"id": "edge-004",
+			"fromNode": "25f5270a",
+			"fromSide": "bottom",
+			"toNode": "e67de607",
+			"toSide": "top"
+		},
+		{
+			"id": "edge-005",
+			"fromNode": "615d9965",
+			"fromSide": "bottom",
+			"toNode": "f0f974e4",
+			"toSide": "top"
+		},
+		{
+			"id": "edge-006",
+			"fromNode": "25f5270a",
+			"fromSide": "right",
+			"toNode": "050b8871",
+			"toSide": "left"
+		},
+		{
+			"id": "edge-007",
+			"fromNode": "f0f974e4",
+			"fromSide": "right",
+			"toNode": "2003e657",
+			"toSide": "left"
+		},
+		{
+			"id": "edge-008",
+			"fromNode": "1613556a",
+			"fromSide": "right",
+			"toNode": "a3983dea",
+			"toSide": "left"
+		},
+		{
+			"id": "edge-009",
+			"fromNode": "a3983dea",
+			"fromSide": "bottom",
+			"toNode": "c0251f59",
+			"toSide": "top"
+		},
+		{
+			"id": "edge-010",
+			"fromNode": "a3983dea",
+			"fromSide": "bottom",
+			"toNode": "7f086a88",
+			"toSide": "top"
+		},
+		{
+			"id": "edge-011",
+			"fromNode": "f0f974e4",
+			"fromSide": "right",
+			"toNode": "6e193a34",
+			"toSide": "left"
+		},
+		{
+			"id": "edge-012",
+			"fromNode": "25f5270a",
+			"fromSide": "right",
+			"toNode": "32747e8e",
+			"toSide": "left"
+		},
+		{
+			"id": "edge-013",
+			"fromNode": "050b8871",
+			"fromSide": "bottom",
+			"toNode": "32747e8e",
+			"toSide": "top"
+		},
+		{
+			"id": "edge-014",
+			"fromNode": "2003e657",
+			"fromSide": "right",
+			"toNode": "32747e8e",
+			"toSide": "left"
+		},
+		{
+			"id": "edge-015",
+			"fromNode": "c0251f59",
+			"fromSide": "right",
+			"toNode": "32747e8e",
+			"toSide": "left"
+		},
+		{
+			"id": "edge-016",
+			"fromNode": "6e193a34",
+			"fromSide": "bottom",
+			"toNode": "32747e8e",
+			"toSide": "top"
+		},
+		{
+			"id": "edge-017",
+			"fromNode": "32747e8e",
+			"fromSide": "bottom",
+			"toNode": "979a011b",
+			"toSide": "top"
+		},
+		{
+			"id": "edge-018",
+			"fromNode": "25f5270a",
+			"fromSide": "right",
+			"toNode": "c08eca15",
+			"toSide": "left"
+		},
+		{
+			"id": "edge-019",
+			"fromNode": "050b8871",
+			"fromSide": "bottom",
+			"toNode": "41361515",
+			"toSide": "top"
+		},
+		{
+			"id": "edge-020",
+			"fromNode": "2003e657",
+			"fromSide": "right",
+			"toNode": "41361515",
+			"toSide": "left"
+		},
+		{
+			"id": "edge-021",
+			"fromNode": "c0251f59",
+			"fromSide": "bottom",
+			"toNode": "13b62c21",
+			"toSide": "top"
+		},
+		{
+			"id": "edge-022",
+			"fromNode": "7f086a88",
+			"fromSide": "right",
+			"toNode": "13b62c21",
+			"toSide": "left"
+		},
+		{
+			"id": "edge-023",
+			"fromNode": "32747e8e",
+			"fromSide": "bottom",
+			"toNode": "e5f549d2",
+			"toSide": "top"
+		},
+		{
+			"id": "edge-024",
+			"fromNode": "25f5270a",
+			"fromSide": "right",
+			"toNode": "d7a459f8",
+			"toSide": "left"
+		},
+		{
+			"id": "edge-025",
+			"fromNode": "050b8871",
+			"fromSide": "bottom",
+			"toNode": "54f07366",
+			"toSide": "top"
+		},
+		{
+			"id": "edge-026",
+			"fromNode": "2003e657",
+			"fromSide": "right",
+			"toNode": "54f07366",
+			"toSide": "left"
+		},
+		{
+			"id": "edge-027",
+			"fromNode": "c0251f59",
+			"fromSide": "bottom",
+			"toNode": "565da23f",
+			"toSide": "top"
+		},
+		{
+			"id": "edge-028",
+			"fromNode": "7f086a88",
+			"fromSide": "right",
+			"toNode": "565da23f",
+			"toSide": "left"
+		},
+		{
+			"id": "edge-029",
+			"fromNode": "32747e8e",
+			"fromSide": "bottom",
+			"toNode": "2393e0f3",
+			"toSide": "top"
+		},
+		{
+			"id": "edge-030",
+			"fromNode": "2393e0f3",
+			"fromSide": "bottom",
+			"toNode": "1a3f7fac",
+			"toSide": "top"
+		}
+	]
+}

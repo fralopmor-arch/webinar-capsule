@@ -1,0 +1,110 @@
+import re
+import os
+import tempfile
+from urllib.parse import urlparse, parse_qs
+from youtube_transcript_api import YouTubeTranscriptApi, TranscriptsDisabled, NoTranscriptFound, VideoUnavailable
+
+def parse_video_id(url: str) -> str:
+    """Extracts the 11-character YouTube video ID from a URL."""
+    # Common regex pattern
+    pattern = r"(?:v=|\/)([0-9A-Za-z_-]{11})(?:\?|&|/|$)"
+    match = re.search(pattern, url)
+    if match:
+        return match.group(1)
+    
+    # URL parsing fallback
+    parsed = urlparse(url)
+    vid = None
+    if parsed.hostname in ('youtu.be', 'www.youtu.be'):
+        vid = parsed.path.lstrip('/')
+    elif parsed.hostname in ('youtube.com', 'www.youtube.com'):
+        if parsed.path == '/watch':
+            vid = parse_qs(parsed.query).get('v', [None])[0]
+        elif parsed.path.startswith(('/embed/', '/v/')):
+            vid = parsed.path.split('/')[2]
+            
+    if vid and len(vid) == 11:
+        return vid
+        
+    raise ValueError(f"Could not extract video ID from URL: {url}")
+
+def get_transcript(video_id: str, languages: list = None) -> dict:
+    """
+    Fetches the primary transcript for a given video ID.
+    Returns a dict with 'text', 'language', and 'is_generated'.
+    """
+    if languages is None:
+        languages = ['es', 'en', 'fr', 'de', 'it']
+    try:
+        transcript_list = YouTubeTranscriptApi().list(video_id)
+        transcript = transcript_list.find_transcript(languages)
+        
+        data = transcript.fetch()
+        text = " ".join([entry.text for entry in data])
+        
+        return {
+            'text': text,
+            'language': transcript.language,
+            'is_generated': transcript.is_generated
+        }
+    except (TranscriptsDisabled, NoTranscriptFound):
+        return None  # Fallback
+    except VideoUnavailable as e:
+        raise ValueError(f"Video {video_id} is unavailable: {e}")
+
+def transcribe_audio_fallback(url: str) -> dict:
+    """
+    Fallback method to download audio and transcribe using faster-whisper.
+    """
+    print(f"Warning: No captions found. Falling back to audio transcription (this may take 5-15 mins).")
+    try:
+        import yt_dlp
+        from faster_whisper import WhisperModel
+    except ImportError:
+        raise ImportError("yt-dlp and faster-whisper are required for fallback. Run: uv add yt-dlp faster-whisper")
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        ydl_opts = {
+            'format': 'bestaudio/best',
+            'outtmpl': os.path.join(tmpdir, 'audio.%(ext)s'),
+            'quiet': True,
+        }
+        
+        try:
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                ydl.download([url])
+        except Exception as e:
+            raise RuntimeError(f"Failed to download audio: {e}")
+            
+        # Find whatever audio file format yt-dlp downloaded (e.g. .m4a, .webm, .ogg)
+        downloaded_files = [os.path.join(tmpdir, f) for f in os.listdir(tmpdir) if f.startswith("audio.")]
+        if not downloaded_files:
+            raise FileNotFoundError("Audio file not downloaded.")
+        audio_path = downloaded_files[0]
+            
+        model = WhisperModel("base", device="cpu", compute_type="int8")
+        segments, info = model.transcribe(audio_path, beam_size=5)
+        text = " ".join(segment.text for segment in segments)
+        
+        return {
+            'text': text,
+            'language': info.language,
+            'is_generated': True
+        }
+
+def get_video_title(video_id: str) -> str:
+    """Fetches the video title using yt-dlp."""
+    try:
+        import yt_dlp
+        url = f"https://www.youtube.com/watch?v={video_id}"
+        ydl_opts = {
+            'quiet': True,
+            'no_warnings': True,
+            'extract_flat': True,
+        }
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=False)
+            return info.get('title', video_id)
+    except Exception:
+        return video_id
+
