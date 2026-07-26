@@ -80,35 +80,26 @@ def transcribe_audio_fallback(url: str) -> dict:
             cookies_file = temp_cookie_path
 
 
-        # Array of fallback player clients for yt-dlp to bypass YouTube bot blocks
-        client_options = [
-            ['android_creator', 'android'],
-            ['ios', 'mweb'],
-            ['tvhtml5', 'web'],
-            ['web']
+        # Client configurations to try in sequence
+        configs = [
+            {'extractor_args': {'youtube': {'player_client': ['android', 'ios']}}},
+            {'extractor_args': {'youtube': {'player_client': ['web']}}},
+            {}  # Standard default yt-dlp extractor settings
         ]
         
         download_success = False
         last_error = None
         
-        for clients in client_options:
+        for cfg in configs:
             ydl_opts = {
-                'format': 'ba/b/best',
+                'format': 'bestaudio/best',
                 'outtmpl': os.path.join(tmpdir, 'audio.%(ext)s'),
                 'quiet': True,
                 'no_warnings': True,
-                'extractor_args': {
-                    'youtube': {
-                        'player_client': clients
-                    }
-                },
-                'postprocessors': [{
-                    'key': 'FFmpegExtractAudio',
-                    'preferredcodec': 'mp3',
-                    'preferredquality': '192',
-                }],
+                'ignoreerrors': False,
             }
-
+            ydl_opts.update(cfg)
+            
             if cookies_file and os.path.exists(cookies_file):
                 ydl_opts['cookiefile'] = cookies_file
                 
@@ -120,6 +111,7 @@ def transcribe_audio_fallback(url: str) -> dict:
             except Exception as e:
                 last_error = e
                 continue
+
 
 
                 
