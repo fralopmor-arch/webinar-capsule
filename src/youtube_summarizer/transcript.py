@@ -30,35 +30,43 @@ def parse_video_id(url: str) -> str:
 
 def get_transcript(video_id: str, languages: list = None) -> dict:
     """
-    Fetches transcript for a given video ID.
+    Fetches transcript for a given video ID using YouTubeTranscriptApi.
     Supports manual captions, auto-generated captions, and language translations.
     """
     if languages is None:
         languages = ['es', 'en', 'fr', 'de', 'it']
     try:
-        transcript_list = YouTubeTranscriptApi().list(video_id)
+        api = YouTubeTranscriptApi()
+        try:
+            transcript_list = api.list(video_id)
+        except AttributeError:
+            transcript_list = api.list_transcripts(video_id)
         
+        transcript = None
         # 1. Try finding exact manual or generated transcript matching preferred languages
         try:
             transcript = transcript_list.find_transcript(languages)
         except Exception:
-            # 2. Try finding ANY available transcript and translate it to preferred language
+            pass
+
+        # 2. Try finding ANY available transcript and translate it
+        if not transcript:
             try:
-                available_transcripts = list(transcript_list)
-                if available_transcripts:
-                    first_transcript = available_transcripts[0]
+                for tr in transcript_list:
                     target_lang = languages[0] if languages else 'en'
-                    if first_transcript.is_translatable:
-                        transcript = first_transcript.translate(target_lang)
+                    if getattr(tr, 'is_translatable', False):
+                        transcript = tr.translate(target_lang)
                     else:
-                        transcript = first_transcript
-                else:
-                    return None
+                        transcript = tr
+                    break
             except Exception:
-                return None
+                pass
+
+        if not transcript:
+            return None
 
         data = transcript.fetch()
-        text = " ".join([entry.text for entry in data])
+        text = " ".join([getattr(entry, 'text', entry.get('text', '')) if isinstance(entry, dict) else entry.text for entry in data])
         
         return {
             'text': text,
@@ -67,6 +75,8 @@ def get_transcript(video_id: str, languages: list = None) -> dict:
         }
     except Exception:
         return None
+
+
 
 
 
