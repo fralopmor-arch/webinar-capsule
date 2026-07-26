@@ -30,26 +30,44 @@ def parse_video_id(url: str) -> str:
 
 def get_transcript(video_id: str, languages: list = None) -> dict:
     """
-    Fetches the primary transcript for a given video ID.
-    Returns a dict with 'text', 'language', and 'is_generated'.
+    Fetches transcript for a given video ID.
+    Supports manual captions, auto-generated captions, and language translations.
     """
     if languages is None:
         languages = ['es', 'en', 'fr', 'de', 'it']
     try:
         transcript_list = YouTubeTranscriptApi().list(video_id)
-        transcript = transcript_list.find_transcript(languages)
         
+        # 1. Try finding exact manual or generated transcript matching preferred languages
+        try:
+            transcript = transcript_list.find_transcript(languages)
+        except Exception:
+            # 2. Try finding ANY available transcript and translate it to preferred language
+            try:
+                available_transcripts = list(transcript_list)
+                if available_transcripts:
+                    first_transcript = available_transcripts[0]
+                    target_lang = languages[0] if languages else 'en'
+                    if first_transcript.is_translatable:
+                        transcript = first_transcript.translate(target_lang)
+                    else:
+                        transcript = first_transcript
+                else:
+                    return None
+            except Exception:
+                return None
+
         data = transcript.fetch()
         text = " ".join([entry.text for entry in data])
         
         return {
             'text': text,
-            'language': transcript.language,
-            'is_generated': transcript.is_generated
+            'language': getattr(transcript, 'language', 'en'),
+            'is_generated': getattr(transcript, 'is_generated', True)
         }
-    except Exception as e:
-        # Catch IP blocks or transcript unavailable exceptions to trigger Whisper fallback
+    except Exception:
         return None
+
 
 
 def transcribe_audio_fallback(url: str) -> dict:
