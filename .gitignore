@@ -19,3 +19,5 @@ summaries/
 skills-lock.json
 AGENTS.md
 RULES.md
+*.canvas
+
