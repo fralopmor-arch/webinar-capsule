@@ -1,12 +1,40 @@
 import sys
+import io
 import time
 import argparse
 import logging
 from pathlib import Path
+
+from rich.console import Console
+from rich.panel import Panel
+from rich.markdown import Markdown
+from rich.status import Status
+from rich.theme import Theme
+
 from .transcript import parse_video_id, get_transcript, transcribe_audio_fallback, get_video_title
 from .sanitizer import sanitize_transcript
 from .storage import save_transcript, save_summary, load_transcript, transcript_exists, SUMMARIES_DIR
 from .summarizer import GeminiSummarizer
+
+# Reconfigure stdout/stderr encoding to UTF-8 on Windows to prevent UnicodeEncodeError
+if sys.platform == "win32":
+    try:
+        sys.stdout.reconfigure(encoding='utf-8')
+        sys.stderr.reconfigure(encoding='utf-8')
+    except (AttributeError, io.UnsupportedOperation):
+        pass
+
+# Define a professional color theme
+custom_theme = Theme({
+    "info": "bold cyan",
+    "success": "bold green",
+    "warning": "bold yellow",
+    "error": "bold red",
+    "progress": "dim white",
+})
+
+console = Console(theme=custom_theme)
+err_console = Console(theme=custom_theme, stderr=True)
 
 def setup_logging(verbose: bool, quiet: bool):
     level = logging.WARNING
@@ -16,34 +44,50 @@ def setup_logging(verbose: bool, quiet: bool):
         level = logging.ERROR
     logging.basicConfig(level=level, format="%(levelname)s: %(message)s")
 
-def log_progress(msg: str, quiet: bool):
-    if not quiet:
-        print(f"[*] {msg}")
-
 def run_pipeline(url: str, output_dir: str, model: str, languages: list, no_save: bool, quiet: bool):
     start_time = time.time()
     
+    if not quiet:
+        console.print(Panel(
+            f"[bold white]YouTube Summarizer[/]\n[progress]Model: {model} | Languages: {', '.join(languages)}[/]",
+            border_style="cyan",
+            title="[bold cyan]YouTube Webinar Capsule[/]",
+            title_align="left"
+        ))
+
     try:
         # 1. Parse URL
-        log_progress("Parsing URL...", quiet)
+        if not quiet:
+            console.print("🔍 [info]Parsing YouTube URL...[/]")
         video_id = parse_video_id(url)
-        log_progress(f"Found Video ID: {video_id}", quiet)
+        if not quiet:
+            console.print(f"   [success]Found Video ID:[/] [bold white]{video_id}[/]")
         
         # Get video title
-        log_progress("Fetching video title...", quiet)
-        title = get_video_title(video_id)
+        title = video_id
+        if not quiet:
+            with console.status("[progress]Fetching video title...", spinner="dots"):
+                title = get_video_title(video_id)
+            console.print(f"🎥 [success]Video Title:[/] [bold white]\"{title}\"[/]")
+        else:
+            title = get_video_title(video_id)
         
         # 2 & 3. Extract Transcript
         transcript_text = ""
         metadata = {}
         
         if not no_save and transcript_exists(video_id):
-            log_progress(f"Found cached transcript for {video_id}, loading...", quiet)
+            if not quiet:
+                console.print(f"💾 [info]Found cached transcript for {video_id}, loading...[/]")
             transcript_text = load_transcript(video_id)
             metadata = {'source': 'cache'}
         else:
-            log_progress(f"Extracting primary transcript (languages: {', '.join(languages)})...", quiet)
-            result = get_transcript(video_id, languages)
+            if not quiet:
+                status_text = f"[progress]Extracting primary transcript ({', '.join(languages)})...[/]"
+                with console.status(status_text, spinner="dots"):
+                    result = get_transcript(video_id, languages)
+            else:
+                result = get_transcript(video_id, languages)
             
             if result:
                 transcript_text = result['text']
@@ -52,53 +96,74 @@ def run_pipeline(url: str, output_dir: str, model: str, languages: list, no_save
                     'is_generated': result['is_generated'],
                     'source': 'youtube-transcript-api'
                 }
+                if not quiet:
+                    console.print(f"📄 [success]Retrieved YouTube captions[/] [dim]({result['language']})[/]")
             else:
-                log_progress("No captions found via API. Falling back to audio transcription...", quiet)
-                result = transcribe_audio_fallback(url)
+                if not quiet:
+                    console.print("⚠️  [warning]No captions found via API. Falling back to audio transcription...[/]")
+                    status_text = "[progress]Downloading audio and transcribing via Whisper (this may take a few minutes)...[/]"
+                    with console.status(status_text, spinner="dots"):
+                        result = transcribe_audio_fallback(url)
+                else:
+                    result = transcribe_audio_fallback(url)
+                
                 transcript_text = result['text']
                 metadata = {
                     'language': result['language'],
                     'is_generated': result['is_generated'],
                     'source': 'faster-whisper'
                 }
+                if not quiet:
+                    console.print(f"📄 [success]Generated transcript using audio fallback[/] [dim]({result['language']})[/]")
                 
             # 4. Sanitize Text
-            log_progress("Sanitizing transcript text...", quiet)
+            if not quiet:
+                console.print("🧹 [info]Sanitizing transcript text...[/]")
             transcript_text = sanitize_transcript(transcript_text)
             
             # 5. Save Transcript
             if not no_save:
                 save_transcript(video_id, transcript_text, metadata)
-                log_progress(f"Saved transcript to cache.", quiet)
+                if not quiet:
+                    console.print("💾 [success]Saved transcript to local cache.[/]")
                 
         if not transcript_text:
             raise ValueError("Failed to obtain transcript text.")
             
         # 6. Summarize
-        log_progress(f"Summarizing with {model}...", quiet)
-        summarizer = GeminiSummarizer(model_name=model)
-        summary = summarizer.generate_summary(transcript_text)
+        if not quiet:
+            status_text = f"[progress]Generating summary with Gemini ({model})...[/]"
+            with console.status(status_text, spinner="dots"):
+                summarizer = GeminiSummarizer(model_name=model)
+                summary = summarizer.generate_summary(transcript_text)
+        else:
+            summarizer = GeminiSummarizer(model_name=model)
+            summary = summarizer.generate_summary(transcript_text)
         
         # 7. Save & Display Summary
         if not no_save:
             summary_file = save_summary(video_id, summary, title=title, output_dir=output_dir)
-            log_progress(f"Summary saved to {summary_file}", quiet)
+            if not quiet:
+                console.print(f"✨ [success]Summary saved to:[/] [bold cyan]{summary_file}[/]")
             
         elapsed = time.time() - start_time
-        log_progress(f"Pipeline completed in {elapsed:.1f} seconds.\n", quiet)
-        
         if not quiet:
-            print("=== SUMMARY ===")
-            print(summary)
-            print("===============\n")
+            console.print(f"\n[success]Pipeline completed in {elapsed:.1f} seconds.[/]\n")
+            
+            console.print(Panel(
+                Markdown(summary),
+                border_style="green",
+                title="[bold green]Generated Summary[/]",
+                title_align="center"
+            ))
             
     except Exception as e:
         if not quiet:
-            print(f"\n[!] Error: {str(e)}", file=sys.stderr)
+            err_console.print(f"\n[bold red]Error:[/] [error]{str(e)}[/]")
             if "FFmpeg" in str(e):
-                print("    Suggestion: Install FFmpeg via 'winget install \"FFmpeg (Essentials Build)\"'", file=sys.stderr)
+                err_console.print("\n[warning]Suggestion: Install FFmpeg via 'winget install \"FFmpeg (Essentials Build)\"'[/]")
             elif "API_KEY" in str(e) or "400" in str(e) or "403" in str(e):
-                print("    Suggestion: Check your GEMINI_API_KEY in the .env file.", file=sys.stderr)
+                err_console.print("\n[warning]Suggestion: Check your GEMINI_API_KEY in the .env file.[/]")
         sys.exit(1)
 
 def main():
@@ -128,3 +193,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

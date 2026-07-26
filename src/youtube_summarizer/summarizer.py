@@ -9,21 +9,20 @@ logger = logging.getLogger(__name__)
 
 SYSTEM_INSTRUCTION = (
     "You are an expert YouTube video summarizer specializing in technical and regulatory webinars.\n"
-    "You MUST generate the ENTIRE response (including headers, field titles, labels, bullets, and text) in the EXACT SAME language as the provided transcript. "
-    "For example, if the transcript is in Spanish, ALL section titles like 'Título', 'Temas Clave', 'Resumen en Puntos', and 'Conclusiones Clave' MUST be written in Spanish.\n\n"
+    "You MUST generate the ENTIRE response (including headers, field titles, labels, bullets, and text) in the EXACT SAME language as the provided transcript.\n\n"
+    "CRITICAL PROMPT REQUIREMENT: You MUST write an extremely long, exhaustive, and detail-rich summary. Do NOT condense, simplify, or skip any details. Capture every single point, argument, background detail, number, speaker name, technology, and reference. Aim for maximum verbosity and detail density.\n\n"
     "Your output MUST consist of two parts, formatted as follows:\n\n"
     "### **PARTE 1: RESUMEN CONCISO / PART 1: CONCISE SUMMARY** (Translate heading to transcript language)\n"
     "1. **Título / Title**: Catchy and descriptive title (in the transcript language)\n"
-    "2. **Temas Clave / Key Topics**: Comma-separated list of main subjects\n"
-    "3. **Resumen en Puntos / Bullet-point Summary**: 4-5 high-level bullet points covering core concepts\n"
-    "4. **Conclusiones Clave / Key Takeaways**: 3 action-oriented or strategic lessons learned\n\n"
+    "2. **Temas Clave / Key Topics**: Extensive, comma-separated list of all subjects and concepts discussed\n"
+    "3. **Resumen en Puntos / Bullet-point Summary**: 5-8 highly detailed bullet points explaining core concepts in-depth\n"
+    "4. **Conclusiones Clave / Key Takeaways**: 3-5 action-oriented or strategic lessons learned, thoroughly explained\n\n"
     "---\n\n"
     "### **PARTE 2: RESUMEN EXHAUSTIVO Y DETALLADO / PART 2: COMPREHENSIVE SUMMARY** (Translate heading to transcript language)\n"
-    "Provide an exhaustive, long-form, and highly detailed summary of the transcript. "
-    "Explain all the arguments, technical specifications, legal/regulatory frameworks, and business models discussed.\n"
-    "- Start with a brief introductory paragraph stating the webinar title, moderator, context/event, and dates.\n"
-    "- Organize the main content by speaker (stating their full name, job title, and company) or major chronological blocks.\n"
-    "- Under each speaker, write detailed sections/bullet points containing all original numbers, percentages, costs, LER codes, specific laws/decrees, and technology names.\n"
+    "Provide a highly exhaustive, long-form, and extremely detailed summary of the transcript. Explain all the arguments, technical specifications, legal/regulatory frameworks, and business models discussed in full detail. Be as verbose as possible.\n"
+    "- Start with a detailed introductory paragraph stating the webinar title, moderator, context/event, and dates.\n"
+    "- Organize the main content by speaker (stating their full name, job title, and company) or major chronological blocks, writing comprehensive paragraphs for each.\n"
+    "- Under each speaker/block, write detailed sections containing all original numbers, percentages, costs, LER codes, specific laws/decrees, and technology names, expanding each point with full context.\n"
     "- If a process flow or balance of mass/energy is described, include a simple ASCII text flowchart representing it.\n"
     "- End with a dedicated 'Sesión de Q&A / Q&A Highlights' section detailing the specific questions asked by the audience and the exact answers given by the speakers.\n\n"
     "Do not extrapolate or introduce external facts. Base your response strictly on the provided transcript."
@@ -35,7 +34,7 @@ Here is the transcript of a YouTube video:
 {transcript}
 </transcript>
 
-Please summarize the transcript above according to your system instructions.
+Please summarize the transcript above according to your system instructions. Be extremely detailed, exhaustive, and verbose.
 """
 
 def should_retry_api_error(exception: Exception) -> bool:
@@ -75,18 +74,19 @@ class GeminiSummarizer:
         dynamic_instruction = (
             f"You are an expert YouTube video summarizer specializing in technical and regulatory webinars.\n"
             f"CRITICAL REQUIREMENT: You MUST generate the ENTIRE response (including headers, titles, bullet points, labels, and text) in **{lang_full}**.\n\n"
+            f"PROMPT REQUIREMENT: You MUST write an extremely long, exhaustive, and detail-rich summary. Do NOT condense, simplify, or skip any details. Capture every single point, argument, background detail, number, speaker name, technology, and reference. Aim for maximum verbosity and detail density.\n\n"
             f"Output Format (All in {lang_full}):\n"
             f"### **PART 1: CONCISE SUMMARY** (Translated to {lang_full})\n"
             f"1. **Title**: Catchy and descriptive title in {lang_full}\n"
-            f"2. **Key Topics**: Comma-separated list of main subjects in {lang_full}\n"
-            f"3. **Bullet-point Summary**: 4-5 high-level bullet points in {lang_full}\n"
-            f"4. **Key Takeaways**: 3 action-oriented or strategic lessons learned in {lang_full}\n\n"
+            f"2. **Key Topics**: Extensive, comma-separated list of all subjects and concepts discussed in {lang_full}\n"
+            f"3. **Bullet-point Summary**: 5-8 highly detailed bullet points explaining core concepts in-depth in {lang_full}\n"
+            f"4. **Key Takeaways**: 3-5 action-oriented or strategic lessons learned, thoroughly explained in {lang_full}\n\n"
             f"---\n\n"
             f"### **PART 2: COMPREHENSIVE AND IN-DEPTH SUMMARY** (Translated to {lang_full})\n"
-            f"Provide an exhaustive, long-form, and highly detailed summary of the transcript written entirely in {lang_full}.\n"
-            f"- Start with a brief introductory paragraph stating the webinar title, moderator, context/event, and dates.\n"
-            f"- Organize main content by speaker or major chronological blocks.\n"
-            f"- Detailed bullet points containing all numbers, costs, laws/decrees, and technology names.\n"
+            f"Provide an extremely exhaustive, long-form, and highly detailed summary of the transcript written entirely in {lang_full}.\n"
+            f"- Start with a detailed introductory paragraph stating the webinar title, moderator, context/event, and dates.\n"
+            f"- Organize main content by speaker or major chronological blocks, writing comprehensive paragraphs for each.\n"
+            f"- Detailed bullet points containing all numbers, costs, laws/decrees, and technology names, expanding each point with full context.\n"
             f"- End with a dedicated 'Q&A Highlights' section in {lang_full}.\n\n"
             f"Do not extrapolate or introduce external facts. Base your response strictly on the provided transcript."
         )
