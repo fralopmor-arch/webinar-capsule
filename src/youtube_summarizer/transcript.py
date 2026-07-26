@@ -93,7 +93,7 @@ def transcribe_audio_fallback(url: str) -> dict:
         
         for clients in client_options:
             ydl_opts = {
-                'format': 'bestaudio/bestaudio*/best',
+                'format': 'ba/b/best',
                 'outtmpl': os.path.join(tmpdir, 'audio.%(ext)s'),
                 'quiet': True,
                 'no_warnings': True,
@@ -101,7 +101,12 @@ def transcribe_audio_fallback(url: str) -> dict:
                     'youtube': {
                         'player_client': clients
                     }
-                }
+                },
+                'postprocessors': [{
+                    'key': 'FFmpegExtractAudio',
+                    'preferredcodec': 'mp3',
+                    'preferredquality': '192',
+                }],
             }
 
             if cookies_file and os.path.exists(cookies_file):
@@ -115,6 +120,7 @@ def transcribe_audio_fallback(url: str) -> dict:
             except Exception as e:
                 last_error = e
                 continue
+
 
                 
         if not download_success:
