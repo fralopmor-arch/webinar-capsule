@@ -147,7 +147,19 @@ def transcribe_audio_fallback(url: str) -> dict:
         }
 
 def get_video_title(video_id: str) -> str:
-    """Fetches the video title using yt-dlp."""
+    """Fetches the video title using official YouTube Data API v3 or yt-dlp fallback."""
+    api_key = os.getenv("YOUTUBE_API_KEY")
+    if api_key:
+        try:
+            from googleapiclient.discovery import build
+            youtube = build("youtube", "v3", developerKey=api_key)
+            response = youtube.videos().list(part="snippet", id=video_id).execute()
+            items = response.get("items", [])
+            if items:
+                return items[0]["snippet"]["title"]
+        except Exception:
+            pass
+
     try:
         import yt_dlp
         url = f"https://www.youtube.com/watch?v={video_id}"
@@ -155,17 +167,12 @@ def get_video_title(video_id: str) -> str:
             'quiet': True,
             'no_warnings': True,
             'extract_flat': True,
-            'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
-            'extractor_args': {
-                'youtube': {
-                    'player_client': ['android', 'ios', 'tvhtml5', 'web']
-                }
-            }
         }
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
             return info.get('title', video_id)
     except Exception:
         return video_id
+
 
 

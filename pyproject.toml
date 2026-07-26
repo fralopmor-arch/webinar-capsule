@@ -10,6 +10,7 @@ readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
     "faster-whisper>=1.2.1",
+    "google-api-python-client>=2.198.0",
     "google-genai>=2.11.0",
     "python-dotenv>=1.2.2",
     "streamlit>=1.60.0",
