@@ -64,24 +64,46 @@ def transcribe_audio_fallback(url: str) -> dict:
         raise ImportError("yt-dlp and faster-whisper are required for fallback. Run: uv add yt-dlp faster-whisper")
 
     with tempfile.TemporaryDirectory() as tmpdir:
-        ydl_opts = {
-            'format': 'bestaudio/best',
-            'outtmpl': os.path.join(tmpdir, 'audio.%(ext)s'),
-            'quiet': True,
-            'no_warnings': True,
-            'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
-            'extractor_args': {
-                'youtube': {
-                    'player_client': ['android', 'ios', 'tvhtml5', 'web']
+        # Check if user provided YouTube cookies via environment variable
+        cookies_file = os.getenv("YOUTUBE_COOKIES_FILE")
+        
+        # Array of fallback player clients for yt-dlp to bypass YouTube bot blocks
+        client_options = [
+            ['android_creator', 'android'],
+            ['ios', 'mweb'],
+            ['tvhtml5', 'web']
+        ]
+        
+        download_success = False
+        last_error = None
+        
+        for clients in client_options:
+            ydl_opts = {
+                'format': 'bestaudio/best',
+                'outtmpl': os.path.join(tmpdir, 'audio.%(ext)s'),
+                'quiet': True,
+                'no_warnings': True,
+                'extractor_args': {
+                    'youtube': {
+                        'player_client': clients
+                    }
                 }
             }
-        }
-        
-        try:
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                ydl.download([url])
-        except Exception as e:
-            raise RuntimeError(f"Failed to download audio: {e}")
+            if cookies_file and os.path.exists(cookies_file):
+                ydl_opts['cookiefile'] = cookies_file
+                
+            try:
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                    ydl.download([url])
+                download_success = True
+                break
+            except Exception as e:
+                last_error = e
+                continue
+                
+        if not download_success:
+            raise RuntimeError(f"Failed to download audio: {last_error}")
+
             
         # Find whatever audio file format yt-dlp downloaded (e.g. .m4a, .webm, .ogg)
         downloaded_files = [os.path.join(tmpdir, f) for f in os.listdir(tmpdir) if f.startswith("audio.")]
