@@ -12,3 +12,8 @@ wheels/
 .env
 transcripts/
 summaries/
+.agents/
+.obsidian/
+.python-version
+.pytest_cache/
+
