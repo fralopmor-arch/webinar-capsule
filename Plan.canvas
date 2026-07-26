@@ -1,198 +1,28 @@
 {
-	"nodes": [
-		{
-			"id": "group-core",
-			"type": "group",
-			"x": 580,
-			"y": -40,
-			"width": 520,
-			"height": 900,
-			"label": "Core Development"
-		},
-		{
-			"id": "group-integration",
-			"type": "group",
-			"x": 1180,
-			"y": -40,
-			"width": 520,
-			"height": 900,
-			"label": "Integration and QA"
-		},
-		{
-			"id": "group-dashbo",
-			"type": "group",
-			"x": 1760,
-			"y": -40,
-			"width": 380,
-			"height": 760,
-			"label": "Dashboard Interface"
-		},
-		{
-			"id": "group-foundation",
-			"type": "group",
-			"x": -20,
-			"y": -40,
-			"width": 520,
-			"height": 480,
-			"label": "Project Foundation"
-		},
-		{
-			"id": "pf-01",
-			"type": "text",
-			"text": "## PF-01 Project Setup and Configuration\n\n**Scope:** Complete project initialization\n\n1. `uv init` + `pyproject.toml` (Python ≥3.13)\n2. Add deps: `youtube-transcript-api`, `google-genai`, `python-dotenv`\n3. Dev deps: `pytest`\n4. Scaffold `src/youtube_summarizer/` with all modules\n5. Create `tests/`, `transcripts/`, `summaries/` dirs\n6. `.env` + `.env.example` + `.gitignore`\n7. Implement `config.py` (dotenv + key validation)\n8. `README.md` with project overview\n\n**Deliverable:** Complete project skeleton, ready for parallel dev",
-			"x": 0,
-			"y": 0,
-			"width": 480,
-			"height": 400,
-			"color": "4"
-		},
-		{
-			"id": "cd-02",
-			"type": "text",
-			"text": "## CD-02 Gemini Summarization Engine\n\n**Scope:** Complete LLM summarization module\n\n1. **Gemini Client** — `google-genai` SDK, model `gemini-2.5-flash` (configurable)\n2. **Prompt Engineering** — Transcript FIRST, instructions AFTER. Output: title, topics, summary, takeaways\n3. **Retry Logic** — Exponential backoff + jitter (3 retries). Catch `429` and `500/503`\n4. **Error Handling** — API exceptions, timeouts, clear messages\n\n**Deliverable:** `summarizer.py` with `GeminiSummarizer` class",
-			"x": 600,
-			"y": 440,
-			"width": 480,
-			"height": 400,
-			"color": "4"
-		},
-		{
-			"id": "iaq-01",
-			"type": "text",
-			"text": "## IAQ-01 CLI Pipeline Integration\n\n**Scope:** CLI entry point + end-to-end orchestration\n\n1. **argparse CLI** — `url` (positional), `--output-dir`, `--model`, `--language`, `--no-save`, `--verbose`, `--quiet`\n2. **Pipeline** — `run_pipeline(url)`: parse URL → check cache → extract transcript → sanitize → save .txt → summarize → display\n3. **UX Polish** — Progress messages, elapsed time, structured errors with suggestions\n\n**Deliverable:** `cli.py` with full working pipeline",
-			"x": 1200,
-			"y": 0,
-			"width": 480,
-			"height": 400,
-			"color": "4"
-		},
-		{
-			"id": "iaq-02",
-			"type": "text",
-			"text": "## IAQ-02 Testing and Documentation\n\n**Scope:** Full test suite + production docs\n\n1. **Unit Tests** — `transcript.py`: URL parsing, API mocking, language fallback\n2. **Unit Tests** — `sanitizer.py`: tag removal, whitespace, Unicode\n3. **Unit Tests** — `storage.py`: save/load roundtrip, cache check\n4. **Unit Tests** — `summarizer.py`: API mocking, retry behavior\n5. **Integration Tests** — Full pipeline with real YouTube videos\n6. **Edge Cases** — No captions, long videos, non-Latin scripts\n7. **README.md** — Install, usage, config, troubleshooting\n\n**Deliverable:** >90% coverage, production `README.md`",
-			"x": 1200,
-			"y": 440,
-			"width": 480,
-			"height": 400,
-			"color": "4"
-		},
-		{
-			"id": "cd-01",
-			"type": "text",
-			"text": "## CD-01 Transcript Extraction Pipeline\n\n**Scope:** Full transcript retrieval + text processing\n\n1. **URL Parsing** — Extract video ID from all YouTube URL formats\n2. **Primary Extraction** — `youtube-transcript-api` with language priority `['es','en','fr','de','it']`. Single `find_transcript()` call (no double-call bug)\n3. **Whisper Fallback** — `yt-dlp` audio download + `faster-whisper` transcription when no captions exist\n4. **Text Sanitizer** — Remove `[Music]`/`[Applause]` tags, normalize whitespace\n5. **Storage** — Save to `transcripts/{video_id}.txt` with metadata header, cache check\n\n**Deliverable:** `transcript.py`, `sanitizer.py`, `storage.py`",
-			"x": 600,
-			"y": 0,
-			"width": 480,
-			"height": 400,
-			"color": "5"
-		},
-		{
-			"id": "de270b404ce7e81b",
-			"type": "text",
-			"text": "## CD-01 Transcript Extraction Pipeline\n\n**Scope:** Full transcript retrieval + text processing\n\n1. **URL Parsing** — Extract video ID from all YouTube URL formats\n2. **Primary Extraction** — `youtube-transcript-api` with language priority `['es','en','fr','de','it']`. Single `find_transcript()` call (no double-call bug)\n3. **Whisper Fallback** — `yt-dlp` audio download + `faster-whisper` transcription when no captions exist\n4. **Text Sanitizer** — Remove `[Music]`/`[Applause]` tags, normalize whitespace\n5. **Storage** — Save to `transcripts/{video_id}.txt` with metadata header, cache check\n\n**Deliverable:** `transcript.py`, `sanitizer.py`, `storage.py`",
-			"x": 600,
-			"y": 0,
-			"width": 480,
-			"height": 400,
-			"color": "4"
-		},
-		{
-			"id": "5c73254f",
-			"type": "text",
-			"text": "## DI-01 DB-01 Streamlit Setup\nSetup Streamlit dependencies and custom theme configuration",
-			"x": 1780,
-			"y": 0,
-			"width": 280,
-			"height": 160,
-			"color": "4"
-		},
-		{
-			"id": "184885b8",
-			"type": "text",
-			"text": "## DI-02 DB-02 Dashboard Layout & Widgets\nBuild header, video preview card, sidebar settings, and results tab container",
-			"x": 1780,
-			"y": 180,
-			"width": 280,
-			"height": 160,
-			"color": "4"
-		},
-		{
-			"id": "82273585",
-			"type": "text",
-			"text": "## DI-03 DB-03 Pipeline Orchestration UI\nConnect live progress tracker (st.status) to transcript extraction and Gemini API pipeline",
-			"x": 1780,
-			"y": 360,
-			"width": 280,
-			"height": 160,
-			"color": "4"
-		},
-		{
-			"id": "a936d03d",
-			"type": "text",
-			"text": "## DI-04 DB-04 Downloads & Analytics Tab\nImplement Markdown/JSON export buttons, transcript search viewer, and runtime stats",
-			"x": 1780,
-			"y": 540,
-			"width": 280,
-			"height": 160,
-			"color": "5"
-		}
+	"nodes":[
+		{"id":"group-core","type":"group","x":580,"y":-40,"width":520,"height":900,"label":"Core Development"},
+		{"id":"group-integration","type":"group","x":1180,"y":-40,"width":520,"height":900,"label":"Integration and QA"},
+		{"id":"group-dashbo","type":"group","x":1760,"y":-40,"width":380,"height":760,"label":"Dashboard Interface"},
+		{"id":"group-foundation","type":"group","x":-20,"y":-40,"width":520,"height":480,"label":"Project Foundation"},
+		{"id":"pf-01","type":"text","text":"## PF-01 Project Setup and Configuration\n\n**Scope:** Complete project initialization\n\n1. `uv init` + `pyproject.toml` (Python ≥3.13)\n2. Add deps: `youtube-transcript-api`, `google-genai`, `python-dotenv`\n3. Dev deps: `pytest`\n4. Scaffold `src/youtube_summarizer/` with all modules\n5. Create `tests/`, `transcripts/`, `summaries/` dirs\n6. `.env` + `.env.example` + `.gitignore`\n7. Implement `config.py` (dotenv + key validation)\n8. `README.md` with project overview\n\n**Deliverable:** Complete project skeleton, ready for parallel dev","x":0,"y":0,"width":480,"height":400,"color":"4"},
+		{"id":"cd-02","type":"text","text":"## CD-02 Gemini Summarization Engine\n\n**Scope:** Complete LLM summarization module\n\n1. **Gemini Client** — `google-genai` SDK, model `gemini-2.5-flash` (configurable)\n2. **Prompt Engineering** — Transcript FIRST, instructions AFTER. Output: title, topics, summary, takeaways\n3. **Retry Logic** — Exponential backoff + jitter (3 retries). Catch `429` and `500/503`\n4. **Error Handling** — API exceptions, timeouts, clear messages\n\n**Deliverable:** `summarizer.py` with `GeminiSummarizer` class","x":600,"y":440,"width":480,"height":400,"color":"4"},
+		{"id":"iaq-01","type":"text","text":"## IAQ-01 CLI Pipeline Integration\n\n**Scope:** CLI entry point + end-to-end orchestration\n\n1. **argparse CLI** — `url` (positional), `--output-dir`, `--model`, `--language`, `--no-save`, `--verbose`, `--quiet`\n2. **Pipeline** — `run_pipeline(url)`: parse URL → check cache → extract transcript → sanitize → save .txt → summarize → display\n3. **UX Polish** — Progress messages, elapsed time, structured errors with suggestions\n\n**Deliverable:** `cli.py` with full working pipeline","x":1200,"y":0,"width":480,"height":400,"color":"4"},
+		{"id":"iaq-02","type":"text","text":"## IAQ-02 Testing and Documentation\n\n**Scope:** Full test suite + production docs\n\n1. **Unit Tests** — `transcript.py`: URL parsing, API mocking, language fallback\n2. **Unit Tests** — `sanitizer.py`: tag removal, whitespace, Unicode\n3. **Unit Tests** — `storage.py`: save/load roundtrip, cache check\n4. **Unit Tests** — `summarizer.py`: API mocking, retry behavior\n5. **Integration Tests** — Full pipeline with real YouTube videos\n6. **Edge Cases** — No captions, long videos, non-Latin scripts\n7. **README.md** — Install, usage, config, troubleshooting\n\n**Deliverable:** >90% coverage, production `README.md`","x":1200,"y":440,"width":480,"height":400,"color":"4"},
+		{"id":"cd-01","type":"text","text":"## CD-01 Transcript Extraction Pipeline\n\n**Scope:** Full transcript retrieval + text processing\n\n1. **URL Parsing** — Extract video ID from all YouTube URL formats\n2. **Primary Extraction** — `youtube-transcript-api` with language priority `['es','en','fr','de','it']`. Single `find_transcript()` call (no double-call bug)\n3. **Whisper Fallback** — `yt-dlp` audio download + `faster-whisper` transcription when no captions exist\n4. **Text Sanitizer** — Remove `[Music]`/`[Applause]` tags, normalize whitespace\n5. **Storage** — Save to `transcripts/{video_id}.txt` with metadata header, cache check\n\n**Deliverable:** `transcript.py`, `sanitizer.py`, `storage.py`","x":600,"y":0,"width":480,"height":400,"color":"5"},
+		{"id":"de270b404ce7e81b","type":"text","text":"## CD-01 Transcript Extraction Pipeline\n\n**Scope:** Full transcript retrieval + text processing\n\n1. **URL Parsing** — Extract video ID from all YouTube URL formats\n2. **Primary Extraction** — `youtube-transcript-api` with language priority `['es','en','fr','de','it']`. Single `find_transcript()` call (no double-call bug)\n3. **Whisper Fallback** — `yt-dlp` audio download + `faster-whisper` transcription when no captions exist\n4. **Text Sanitizer** — Remove `[Music]`/`[Applause]` tags, normalize whitespace\n5. **Storage** — Save to `transcripts/{video_id}.txt` with metadata header, cache check\n\n**Deliverable:** `transcript.py`, `sanitizer.py`, `storage.py`","x":600,"y":0,"width":480,"height":400,"color":"4"},
+		{"id":"5c73254f","type":"text","text":"## DI-01 DB-01 Streamlit Setup\nSetup Streamlit dependencies and custom theme configuration","x":1780,"y":0,"width":280,"height":160,"color":"4"},
+		{"id":"184885b8","type":"text","text":"## DI-02 DB-02 Dashboard Layout & Widgets\nBuild header, video preview card, sidebar settings, and results tab container","x":1780,"y":180,"width":280,"height":160,"color":"4"},
+		{"id":"82273585","type":"text","text":"## DI-03 DB-03 Pipeline Orchestration UI\nConnect live progress tracker (st.status) to transcript extraction and Gemini API pipeline","x":1780,"y":360,"width":280,"height":160,"color":"4"},
+		{"id":"a936d03d","type":"text","text":"## DI-04 DB-04 Downloads & Analytics Tab\nImplement Markdown/JSON export buttons, transcript search viewer, and runtime stats","x":1780,"y":540,"width":280,"height":160,"color":"4"}
 	],
-	"edges": [
-		{
-			"id": "edge-001",
-			"fromNode": "pf-01",
-			"fromSide": "right",
-			"toNode": "cd-01",
-			"toSide": "left"
-		},
-		{
-			"id": "edge-002",
-			"fromNode": "pf-01",
-			"fromSide": "right",
-			"toNode": "cd-02",
-			"toSide": "left"
-		},
-		{
-			"id": "edge-003",
-			"fromNode": "cd-01",
-			"fromSide": "right",
-			"toNode": "iaq-01",
-			"toSide": "left"
-		},
-		{
-			"id": "edge-004",
-			"fromNode": "cd-02",
-			"fromSide": "right",
-			"toNode": "iaq-01",
-			"toSide": "left"
-		},
-		{
-			"id": "edge-005",
-			"fromNode": "iaq-01",
-			"fromSide": "bottom",
-			"toNode": "iaq-02",
-			"toSide": "top"
-		},
-		{
-			"id": "edge-006",
-			"fromNode": "5c73254f",
-			"fromSide": "bottom",
-			"toNode": "184885b8",
-			"toSide": "top"
-		},
-		{
-			"id": "edge-007",
-			"fromNode": "184885b8",
-			"fromSide": "bottom",
-			"toNode": "82273585",
-			"toSide": "top"
-		},
-		{
-			"id": "edge-008",
-			"fromNode": "82273585",
-			"fromSide": "bottom",
-			"toNode": "a936d03d",
-			"toSide": "top"
-		}
+	"edges":[
+		{"id":"edge-001","fromNode":"pf-01","fromSide":"right","toNode":"cd-01","toSide":"left"},
+		{"id":"edge-002","fromNode":"pf-01","fromSide":"right","toNode":"cd-02","toSide":"left"},
+		{"id":"edge-003","fromNode":"cd-01","fromSide":"right","toNode":"iaq-01","toSide":"left"},
+		{"id":"edge-004","fromNode":"cd-02","fromSide":"right","toNode":"iaq-01","toSide":"left"},
+		{"id":"edge-005","fromNode":"iaq-01","fromSide":"bottom","toNode":"iaq-02","toSide":"top"},
+		{"id":"edge-006","fromNode":"5c73254f","fromSide":"bottom","toNode":"184885b8","toSide":"top"},
+		{"id":"edge-007","fromNode":"184885b8","fromSide":"bottom","toNode":"82273585","toSide":"top"},
+		{"id":"edge-008","fromNode":"82273585","fromSide":"bottom","toNode":"a936d03d","toSide":"top"}
 	]
 }
