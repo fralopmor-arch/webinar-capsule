@@ -19,6 +19,37 @@ def get_supabase_client() -> Optional[Client]:
             return None
     return None
 
+def check_user_rate_limit(user_ip: str, max_requests: int = 3) -> bool:
+    """Checks if the user has reached their maximum allowed request limit."""
+    supabase = get_supabase_client()
+    if supabase:
+        try:
+            res = supabase.table("user_requests").select("request_count").eq("ip_address", user_ip).execute()
+            if res.data and len(res.data) > 0:
+                return res.data[0]["request_count"] < max_requests
+            return True
+        except Exception:
+            pass
+    return True
+
+def record_user_request(user_ip: str) -> int:
+    """Increments the request count for a user IP in Supabase. Returns updated request count."""
+    supabase = get_supabase_client()
+    if supabase:
+        try:
+            res = supabase.table("user_requests").select("request_count").eq("ip_address", user_ip).execute()
+            if res.data and len(res.data) > 0:
+                current_count = res.data[0]["request_count"] + 1
+                supabase.table("user_requests").update({"request_count": current_count, "last_request_at": datetime.now().isoformat()}).eq("ip_address", user_ip).execute()
+                return current_count
+            else:
+                supabase.table("user_requests").insert({"ip_address": user_ip, "request_count": 1, "last_request_at": datetime.now().isoformat()}).execute()
+                return 1
+        except Exception:
+            pass
+    return 1
+
+
 def transcript_exists(video_id: str) -> bool:
     """Checks if a transcript exists in Supabase or local cache."""
     supabase = get_supabase_client()

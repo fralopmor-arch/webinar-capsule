@@ -138,105 +138,125 @@ with col_preview:
 
 st.space("medium")
 
+from youtube_summarizer.storage import save_transcript, save_summary, load_transcript, transcript_exists, check_user_rate_limit, record_user_request
+
+# Get client IP / session ID
+client_ip = "127.0.0.1"
+try:
+    if hasattr(st, "context") and hasattr(st.context, "headers"):
+        client_ip = st.context.headers.get("x-forwarded-for", "127.0.0.1").split(",")[0]
+except Exception:
+    pass
+
+st.session_state.setdefault("local_request_count", 0)
+
 # Pipeline Execution Trigger
 if start_button and video_url.strip():
-    start_time = time.time()
-    st.session_state["summary_result"] = None
-    st.session_state["transcript_result"] = None
-    st.session_state["video_title"] = None
-    st.session_state["video_id"] = None
-    st.session_state["pipeline_metadata"] = {}
-    
-    with st.status("Processing YouTube video...", expanded=True) as status:
-        try:
-            # 1. Parse URL & Validate Video ID
-            st.write("🔍 **Parsing YouTube URL...**")
-            video_id = parse_video_id(video_url.strip())
-            st.session_state["video_id"] = video_id
-            st.write(f"✓ Video ID extracted: `{video_id}`")
-            
-            # Fetch Video Title
-            st.write("🎬 **Fetching video metadata...**")
-            title = get_video_title(video_id)
-            st.session_state["video_title"] = title
-            st.write(f"✓ Title: **{title}**")
-            
-            # 2. Extract Transcript
-            transcript_text = ""
-            metadata = {}
-            langs = available_languages if available_languages else ["es", "en"]
-            
-            if not no_save_option and transcript_exists(video_id):
-                st.write("⚡ **Found cached transcript on disk.** Loading...")
-                transcript_text = load_transcript(video_id)
-                metadata = {"source": "local-cache"}
-            else:
-                st.write(f"📥 **Extracting captions** (preferred languages: `{', '.join(langs)}`)...")
-                result = get_transcript(video_id, langs)
+    # Check rate limit (Max 3 requests per user)
+    if st.session_state["local_request_count"] >= 3 or not check_user_rate_limit(client_ip, max_requests=3):
+        st.error("🚫 **Rate limit reached!** You have used all 3 free summary requests for your session/IP.", icon=":material/lock:")
+    else:
+        record_user_request(client_ip)
+        st.session_state["local_request_count"] += 1
+        
+        start_time = time.time()
+        st.session_state["summary_result"] = None
+        st.session_state["transcript_result"] = None
+        st.session_state["video_title"] = None
+        st.session_state["video_id"] = None
+        st.session_state["pipeline_metadata"] = {}
+        
+        with st.status("Processing YouTube video...", expanded=True) as status:
+            try:
+                # 1. Parse URL & Validate Video ID
+                st.write("🔍 **Parsing YouTube URL...**")
+                video_id = parse_video_id(video_url.strip())
+                st.session_state["video_id"] = video_id
+                st.write(f"✓ Video ID extracted: `{video_id}`")
                 
-                if result:
-                    transcript_text = result["text"]
-                    metadata = {
-                        "language": result["language"],
-                        "is_generated": result["is_generated"],
-                        "source": "youtube-transcript-api"
-                    }
-                    st.write(f"✓ Captions extracted ({result['language']})")
-                elif enable_whisper:
-                    st.write("🎙️ **No captions found.** Falling back to audio transcription (Whisper)...")
-                    result = transcribe_audio_fallback(video_url.strip())
-                    transcript_text = result["text"]
-                    metadata = {
-                        "language": result.get("language", "auto"),
-                        "is_generated": True,
-                        "source": "faster-whisper"
-                    }
-                    st.write("✓ Whisper transcription completed.")
+                # Fetch Video Title
+                st.write("🎬 **Fetching video metadata...**")
+                title = get_video_title(video_id)
+                st.session_state["video_title"] = title
+                st.write(f"✓ Title: **{title}**")
+                
+                # 2. Extract Transcript
+                transcript_text = ""
+                metadata = {}
+                langs = available_languages if available_languages else ["es", "en"]
+                
+                if not no_save_option and transcript_exists(video_id):
+                    st.write("⚡ **Found cached transcript.** Loading...")
+                    transcript_text = load_transcript(video_id)
+                    metadata = {"source": "local-cache"}
                 else:
-                    raise ValueError("No YouTube captions found and Whisper fallback is disabled.")
+                    st.write(f"📥 **Extracting captions** (preferred languages: `{', '.join(langs)}`)...")
+                    result = get_transcript(video_id, langs)
+                    
+                    if result:
+                        transcript_text = result["text"]
+                        metadata = {
+                            "language": result["language"],
+                            "is_generated": result["is_generated"],
+                            "source": "youtube-transcript-api"
+                        }
+                        st.write(f"✓ Captions extracted ({result['language']})")
+                    elif enable_whisper:
+                        st.write("🎙️ **No captions found.** Falling back to audio transcription (Whisper)...")
+                        result = transcribe_audio_fallback(video_url.strip())
+                        transcript_text = result["text"]
+                        metadata = {
+                            "language": result.get("language", "auto"),
+                            "is_generated": True,
+                            "source": "faster-whisper"
+                        }
+                        st.write("✓ Whisper transcription completed.")
+                    else:
+                        raise ValueError("No YouTube captions found and Whisper fallback is disabled.")
+                    
+                    # Sanitize Transcript
+                    st.write("🧹 **Sanitizing transcript text...**")
+                    transcript_text = sanitize_transcript(transcript_text)
+                    
+                    # Save Transcript
+                    if not no_save_option:
+                        save_transcript(video_id, transcript_text, metadata)
+                        st.write("✓ Saved transcript to cache.")
                 
-                # Sanitize Transcript
-                st.write("🧹 **Sanitizing transcript text...**")
-                transcript_text = sanitize_transcript(transcript_text)
+                st.session_state["transcript_result"] = transcript_text
                 
-                # Save Transcript
+                # 3. Summarize with Gemini
+                summary_lang = langs[0] if langs else "es"
+                st.write(f"🤖 **Generating AI summary in `{summary_lang}` using `{selected_model}`...**")
+                summarizer = GeminiSummarizer(model_name=selected_model)
+                summary = summarizer.generate_summary(transcript_text, target_language=summary_lang)
+                
                 if not no_save_option:
-                    save_transcript(video_id, transcript_text, metadata)
-                    st.write("✓ Saved transcript to cache.")
-            
-            st.session_state["transcript_result"] = transcript_text
-            
-            # 3. Summarize with Gemini
-            summary_lang = langs[0] if langs else "es"
-            st.write(f"🤖 **Generating AI summary in `{summary_lang}` using `{selected_model}`...**")
-            summarizer = GeminiSummarizer(model_name=selected_model)
-            summary = summarizer.generate_summary(transcript_text, target_language=summary_lang)
-            
-            if not no_save_option:
-                summary_file = save_summary(video_id, summary, title=title)
-                st.write(f"✓ Saved summary to `{summary_file}`")
-            
-            elapsed = time.time() - start_time
-            st.session_state["summary_result"] = summary
-            st.session_state["pipeline_metadata"] = {
-                "elapsed_seconds": round(elapsed, 2),
-                "model": selected_model,
-                "source": metadata.get("source", "unknown"),
-                "char_count": len(transcript_text),
-                "word_count": len(transcript_text.split()),
-                "language": metadata.get("language", "unknown")
-            }
-            
-            status.update(label=f"Pipeline completed in {elapsed:.1f}s!", state="complete", expanded=False)
-            st.toast("Summary generated successfully!", icon=":material/check_circle:")
-            
-        except Exception as e:
-            status.update(label="Pipeline failed", state="error", expanded=True)
-            st.error(f"Error: {str(e)}", icon=":material/error:")
-            if "FFmpeg" in str(e):
-                st.info("Tip: Install FFmpeg to enable audio downloading and Whisper transcription.", icon=":material/lightbulb:")
-            elif "API_KEY" in str(e) or "400" in str(e) or "403" in str(e):
-                st.info("Tip: Check your GEMINI_API_KEY setting in the environment/.env file.", icon=":material/lightbulb:")
+                    save_summary(video_id, summary, title=title)
+                    st.write("✓ Saved summary to cache.")
+                
+                elapsed = time.time() - start_time
+                st.session_state["summary_result"] = summary
+                st.session_state["pipeline_metadata"] = {
+                    "elapsed_seconds": round(elapsed, 2),
+                    "model": selected_model,
+                    "source": metadata.get("source", "unknown"),
+                    "char_count": len(transcript_text),
+                    "word_count": len(transcript_text.split()),
+                    "language": metadata.get("language", "unknown")
+                }
+                
+                status.update(label=f"Pipeline completed in {elapsed:.1f}s!", state="complete", expanded=False)
+                st.toast("Summary generated successfully!", icon=":material/check_circle:")
+                
+            except Exception as e:
+                status.update(label="Pipeline failed", state="error", expanded=True)
+                st.error(f"Error: {str(e)}", icon=":material/error:")
+                if "FFmpeg" in str(e):
+                    st.info("Tip: Install FFmpeg to enable audio downloading and Whisper transcription.", icon=":material/lightbulb:")
+                elif "API_KEY" in str(e) or "400" in str(e) or "403" in str(e):
+                    st.info("Tip: Check your GEMINI_API_KEY setting in the environment/.env file.", icon=":material/lightbulb:")
+
 
 # Key Highlights Metric Header (when summary is loaded)
 if st.session_state["summary_result"]:
