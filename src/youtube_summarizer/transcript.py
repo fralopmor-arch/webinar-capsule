@@ -69,15 +69,25 @@ def transcribe_audio_fallback(url: str) -> dict:
         cookies_text = os.getenv("YOUTUBE_COOKIES")
         
         if not cookies_file and cookies_text:
-            # Unescape newlines if user pasted single-line string with \n or quotes
-            clean_cookies = cookies_text.strip().strip("'").strip('"').replace('\\n', '\n')
-            if not clean_cookies.startswith("# Netscape"):
-                clean_cookies = "# Netscape HTTP Cookie File\n" + clean_cookies
-            
-            temp_cookie_path = os.path.join(tmpdir, "youtube_cookies.txt")
-            with open(temp_cookie_path, "w", encoding="utf-8", newline="\n") as f:
-                f.write(clean_cookies + "\n")
-            cookies_file = temp_cookie_path
+            lines = []
+            for line in cookies_text.strip().strip("'").strip('"').replace('\\n', '\n').splitlines():
+                line = line.strip()
+                if not line or line.startswith('#'):
+                    continue
+                # Split space or tab separated fields and re-join with tab for Netscape compliance
+                parts = line.split()
+                if len(parts) >= 7:
+                    lines.append("\t".join(parts[:7]))
+                elif len(parts) >= 6:
+                    lines.append("\t".join(parts))
+
+            if lines:
+                cookie_content = "# Netscape HTTP Cookie File\n# http://curl.haxx.se/rfc/cookie_spec.html\n# This is a generated file! Do not edit.\n\n" + "\n".join(lines) + "\n"
+                temp_cookie_path = os.path.join(tmpdir, "youtube_cookies.txt")
+                with open(temp_cookie_path, "w", encoding="utf-8", newline="\n") as f:
+                    f.write(cookie_content)
+                cookies_file = temp_cookie_path
+
 
 
         # Client configurations to try in sequence
