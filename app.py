@@ -152,12 +152,16 @@ st.session_state.setdefault("local_request_count", 0)
 
 # Pipeline Execution Trigger
 if start_button and video_url.strip():
-    # Check rate limit (Max 3 requests per user)
-    if st.session_state["local_request_count"] >= 3 or not check_user_rate_limit(client_ip, max_requests=3):
+    # Bypass rate limit for local development/testing (127.0.0.1 / localhost)
+    is_local_test = client_ip in ("127.0.0.1", "localhost", "::1")
+    
+    if not is_local_test and (st.session_state["local_request_count"] >= 3 or not check_user_rate_limit(client_ip, max_requests=3)):
         st.error("🚫 **Rate limit reached!** You have used all 3 free summary requests for your session/IP.", icon=":material/lock:")
     else:
-        record_user_request(client_ip)
-        st.session_state["local_request_count"] += 1
+        if not is_local_test:
+            record_user_request(client_ip)
+            st.session_state["local_request_count"] += 1
+
         
         start_time = time.time()
         st.session_state["summary_result"] = None
