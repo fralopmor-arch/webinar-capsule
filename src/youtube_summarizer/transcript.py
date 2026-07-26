@@ -68,6 +68,13 @@ def transcribe_audio_fallback(url: str) -> dict:
             'format': 'bestaudio/best',
             'outtmpl': os.path.join(tmpdir, 'audio.%(ext)s'),
             'quiet': True,
+            'no_warnings': True,
+            'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+            'extractor_args': {
+                'youtube': {
+                    'player_client': ['android', 'ios', 'tvhtml5', 'web']
+                }
+            }
         }
         
         try:
@@ -101,10 +108,17 @@ def get_video_title(video_id: str) -> str:
             'quiet': True,
             'no_warnings': True,
             'extract_flat': True,
+            'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+            'extractor_args': {
+                'youtube': {
+                    'player_client': ['android', 'ios', 'tvhtml5', 'web']
+                }
+            }
         }
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
             return info.get('title', video_id)
     except Exception:
         return video_id
+
 
