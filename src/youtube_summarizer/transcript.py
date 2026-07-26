@@ -90,37 +90,45 @@ def transcribe_audio_fallback(url: str) -> dict:
 
 
 
-        # Client configurations to try in sequence
-        configs = [
-            {'extractor_args': {'youtube': {'player_client': ['android', 'ios']}}},
-            {'extractor_args': {'youtube': {'player_client': ['web']}}},
-            {}  # Standard default yt-dlp extractor settings
+        # Formats to try in sequence
+        format_options = ['bestaudio/best', 'ba', 'b', 'best', 'worst']
+        client_options = [
+            ['web'],
+            ['android', 'ios'],
+            ['tvhtml5']
         ]
         
         download_success = False
         last_error = None
         
-        for cfg in configs:
-            ydl_opts = {
-                'format': 'bestaudio/best',
-                'outtmpl': os.path.join(tmpdir, 'audio.%(ext)s'),
-                'quiet': True,
-                'no_warnings': True,
-                'ignoreerrors': False,
-            }
-            ydl_opts.update(cfg)
-            
-            if cookies_file and os.path.exists(cookies_file):
-                ydl_opts['cookiefile'] = cookies_file
-                
-            try:
-                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                    ydl.download([url])
-                download_success = True
+        for fmt in format_options:
+            for clients in client_options:
+                ydl_opts = {
+                    'format': fmt,
+                    'outtmpl': os.path.join(tmpdir, 'audio.%(ext)s'),
+                    'quiet': True,
+                    'no_warnings': True,
+                    'ignoreerrors': False,
+                    'extractor_args': {
+                        'youtube': {
+                            'player_client': clients
+                        }
+                    }
+                }
+                if cookies_file and os.path.exists(cookies_file):
+                    ydl_opts['cookiefile'] = cookies_file
+                    
+                try:
+                    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                        ydl.download([url])
+                    download_success = True
+                    break
+                except Exception as e:
+                    last_error = e
+                    continue
+            if download_success:
                 break
-            except Exception as e:
-                last_error = e
-                continue
+
 
 
 
