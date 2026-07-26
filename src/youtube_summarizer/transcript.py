@@ -47,10 +47,10 @@ def get_transcript(video_id: str, languages: list = None) -> dict:
             'language': transcript.language,
             'is_generated': transcript.is_generated
         }
-    except (TranscriptsDisabled, NoTranscriptFound):
-        return None  # Fallback
-    except VideoUnavailable as e:
-        raise ValueError(f"Video {video_id} is unavailable: {e}")
+    except Exception as e:
+        # Catch IP blocks or transcript unavailable exceptions to trigger Whisper fallback
+        return None
+
 
 def transcribe_audio_fallback(url: str) -> dict:
     """
