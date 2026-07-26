@@ -20,4 +20,6 @@ skills-lock.json
 AGENTS.md
 RULES.md
 *.canvas
+canvas-tool.py
+pyproject.toml
 
