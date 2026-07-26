@@ -20,32 +20,33 @@ def get_supabase_client() -> Optional[Client]:
     return None
 
 def transcript_exists(video_id: str) -> bool:
-    """Checks if a transcript exists in local cache or Supabase."""
-    if (TRANSCRIPTS_DIR / f"{video_id}.txt").exists():
-        return True
+    """Checks if a transcript exists in Supabase or local cache."""
     supabase = get_supabase_client()
     if supabase:
         try:
             res = supabase.table("transcripts").select("id").eq("video_id", video_id).execute()
-            return len(res.data) > 0
+            if len(res.data) > 0:
+                return True
         except Exception:
             pass
-    return False
+    return (TRANSCRIPTS_DIR / f"{video_id}.txt").exists()
 
-def save_transcript(video_id: str, text: str, metadata: Optional[dict] = None) -> Path:
-    """Saves the raw transcript locally and to Supabase database if connected."""
-    TRANSCRIPTS_DIR.mkdir(parents=True, exist_ok=True)
-    filepath = TRANSCRIPTS_DIR / f"{video_id}.txt"
-    
-    header = f"--- Video ID: {video_id} ---\n"
-    header += f"--- Date: {datetime.now().isoformat()} ---\n"
-    if metadata:
-        for k, v in metadata.items():
-            header += f"--- {k}: {v} ---\n"
-    header += "-" * 30 + "\n\n"
-    
-    with open(filepath, "w", encoding="utf-8") as f:
-        f.write(header + text)
+def save_transcript(video_id: str, text: str, metadata: Optional[dict] = None, save_to_disk: bool = False) -> Optional[Path]:
+    """Saves the raw transcript to Supabase. Optionally saves to local disk if save_to_disk is True."""
+    filepath = None
+    if save_to_disk:
+        TRANSCRIPTS_DIR.mkdir(parents=True, exist_ok=True)
+        filepath = TRANSCRIPTS_DIR / f"{video_id}.txt"
+        
+        header = f"--- Video ID: {video_id} ---\n"
+        header += f"--- Date: {datetime.now().isoformat()} ---\n"
+        if metadata:
+            for k, v in metadata.items():
+                header += f"--- {k}: {v} ---\n"
+        header += "-" * 30 + "\n\n"
+        
+        with open(filepath, "w", encoding="utf-8") as f:
+            f.write(header + text)
 
     # Supabase persistence
     supabase = get_supabase_client()
@@ -59,23 +60,13 @@ def save_transcript(video_id: str, text: str, metadata: Optional[dict] = None) -
                 {"video_id": video_id, "language": lang, "content": text, "metadata": metadata or {}},
                 on_conflict="video_id"
             ).execute()
-        except Exception as e:
-            # Fallback to local storage gracefully if DB fails or tables are not created yet
+        except Exception:
             pass
         
     return filepath
 
 def load_transcript(video_id: str) -> str:
-    """Loads a transcript from local cache or Supabase."""
-    filepath = TRANSCRIPTS_DIR / f"{video_id}.txt"
-    if filepath.exists():
-        with open(filepath, "r", encoding="utf-8") as f:
-            content = f.read()
-        separator = "-" * 30 + "\n\n"
-        if separator in content:
-            return content.split(separator, 1)[1]
-        return content
-
+    """Loads a transcript from Supabase first, falling back to local disk cache."""
     supabase = get_supabase_client()
     if supabase:
         try:
@@ -85,24 +76,35 @@ def load_transcript(video_id: str) -> str:
         except Exception:
             pass
 
+    filepath = TRANSCRIPTS_DIR / f"{video_id}.txt"
+    if filepath.exists():
+        with open(filepath, "r", encoding="utf-8") as f:
+            content = f.read()
+        separator = "-" * 30 + "\n\n"
+        if separator in content:
+            return content.split(separator, 1)[1]
+        return content
+
     raise FileNotFoundError(f"Transcript for {video_id} not found.")
 
-def save_summary(video_id: str, summary: str, title: Optional[str] = None, output_dir: Optional[Path] = None, model: str = "gemini-3.1-flash-lite") -> Path:
-    """Saves the summary to local .md file and to Supabase database if connected."""
-    target_dir = Path(output_dir) if output_dir else SUMMARIES_DIR
-    target_dir.mkdir(parents=True, exist_ok=True)
-    
-    if title:
-        clean_title = re.sub(r'[\\/*?:"<>|]', "", title)
-        clean_title = re.sub(r'\s+', "_", clean_title)
-        clean_title = re.sub(r'_+', "_", clean_title).strip("_")
-        filename = f"{clean_title}.md"
-    else:
-        filename = f"{video_id}_summary.md"
+def save_summary(video_id: str, summary: str, title: Optional[str] = None, output_dir: Optional[Path] = None, model: str = "gemini-3.1-flash-lite", save_to_disk: bool = False) -> Optional[Path]:
+    """Saves the summary to Supabase. Optionally saves to local disk if save_to_disk is True."""
+    filepath = None
+    if save_to_disk:
+        target_dir = Path(output_dir) if output_dir else SUMMARIES_DIR
+        target_dir.mkdir(parents=True, exist_ok=True)
         
-    filepath = target_dir / filename
-    with open(filepath, "w", encoding="utf-8") as f:
-        f.write(summary)
+        if title:
+            clean_title = re.sub(r'[\\/*?:"<>|]', "", title)
+            clean_title = re.sub(r'\s+', "_", clean_title)
+            clean_title = re.sub(r'_+', "_", clean_title).strip("_")
+            filename = f"{clean_title}.md"
+        else:
+            filename = f"{video_id}_summary.md"
+            
+        filepath = target_dir / filename
+        with open(filepath, "w", encoding="utf-8") as f:
+            f.write(summary)
 
     # Supabase persistence
     supabase = get_supabase_client()
@@ -113,10 +115,11 @@ def save_summary(video_id: str, summary: str, title: Optional[str] = None, outpu
                 {"video_id": video_id, "model": model, "content": summary},
                 on_conflict="video_id"
             ).execute()
-        except Exception as e:
+        except Exception:
             pass
         
     return filepath
+
 
 
 
