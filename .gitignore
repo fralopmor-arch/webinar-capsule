@@ -16,4 +16,6 @@ summaries/
 .obsidian/
 .python-version
 .pytest_cache/
-
+skills-lock.json
+AGENTS.md
+RULES.md
