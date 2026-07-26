@@ -69,10 +69,16 @@ def transcribe_audio_fallback(url: str) -> dict:
         cookies_text = os.getenv("YOUTUBE_COOKIES")
         
         if not cookies_file and cookies_text:
+            # Unescape newlines if user pasted single-line string with \n or quotes
+            clean_cookies = cookies_text.strip().strip("'").strip('"').replace('\\n', '\n')
+            if not clean_cookies.startswith("# Netscape"):
+                clean_cookies = "# Netscape HTTP Cookie File\n" + clean_cookies
+            
             temp_cookie_path = os.path.join(tmpdir, "youtube_cookies.txt")
-            with open(temp_cookie_path, "w", encoding="utf-8") as f:
-                f.write(cookies_text)
+            with open(temp_cookie_path, "w", encoding="utf-8", newline="\n") as f:
+                f.write(clean_cookies + "\n")
             cookies_file = temp_cookie_path
+
 
         # Array of fallback player clients for yt-dlp to bypass YouTube bot blocks
         client_options = [
