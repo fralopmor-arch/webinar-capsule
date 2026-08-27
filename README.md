@@ -68,6 +68,10 @@ Launch the beautiful enterprise dashboard to process links in a visual interface
 uv run streamlit run app.py
 ```
 
+<p align="center">
+  <img src="assets/dashboard.png" alt="Webinar Capsule Dashboard" width="100%">
+</p>
+
 ### 💻 Option B: Command Line Interface (CLI)
 For quick terminal operations or automated shell scripting:
 ```bash
