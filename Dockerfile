@@ -20,11 +20,14 @@ WORKDIR /app
 # Copy dependency specifications first to leverage Docker layer caching
 COPY pyproject.toml uv.lock ./
 
-# Install dependencies into virtual environment
-RUN uv sync --frozen --no-cache
+# Install dependencies into virtual environment without building the root project yet
+RUN uv sync --frozen --no-install-project --no-dev --no-cache
 
-# Copy application source code
+# Copy application source code (including README.md, src/, and app.py)
 COPY . .
+
+# Finalize sync to install the local project package
+RUN uv sync --frozen --no-dev --no-cache
 
 # Expose default Streamlit port
 EXPOSE 8501
@@ -32,7 +35,8 @@ EXPOSE 8501
 ENV PORT=8501 \
     STREAMLIT_SERVER_PORT=8501 \
     STREAMLIT_SERVER_ADDRESS=0.0.0.0 \
-    STREAMLIT_SERVER_HEADLESS=true
+    STREAMLIT_SERVER_HEADLESS=true \
+    PATH="/app/.venv/bin:$PATH"
 
 # Launch Streamlit app, dynamically respecting $PORT injected by cloud providers (Render, Railway, etc.)
-CMD ["sh", "-c", "uv run streamlit run app.py --server.port=${PORT:-8501} --server.address=0.0.0.0"]
+CMD ["sh", "-c", "streamlit run app.py --server.port=${PORT:-8501} --server.address=0.0.0.0"]
