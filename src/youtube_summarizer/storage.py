@@ -118,7 +118,7 @@ def load_transcript(video_id: str) -> str:
 
     raise FileNotFoundError(f"Transcript for {video_id} not found.")
 
-def save_summary(video_id: str, summary: str, title: Optional[str] = None, output_dir: Optional[Path] = None, model: str = "gemini-3.1-flash-lite", save_to_disk: bool = True) -> Optional[Path]:
+def save_summary(video_id: str, summary: str, title: Optional[str] = None, output_dir: Optional[Path] = None, model: str = "deepseek-chat", save_to_disk: bool = True) -> Optional[Path]:
     """Saves the summary to local .md file and to Supabase database if connected."""
     filepath = None
     if save_to_disk:

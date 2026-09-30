@@ -4,7 +4,7 @@ from src.youtube_summarizer.cli import run_pipeline
 
 @patch("src.youtube_summarizer.cli.transcript_exists")
 @patch("src.youtube_summarizer.cli.get_video_title")
-@patch("src.youtube_summarizer.cli.GeminiSummarizer")
+@patch("src.youtube_summarizer.cli.DeepSeekSummarizer")
 @patch("src.youtube_summarizer.cli.get_transcript")
 @patch("src.youtube_summarizer.cli.save_transcript")
 @patch("src.youtube_summarizer.cli.save_summary")
@@ -26,7 +26,7 @@ def test_run_pipeline_success(mock_save_summary, mock_save_transcript, mock_get_
     run_pipeline(
         url="https://www.youtube.com/watch?v=dQw4w9WgXcQ",
         output_dir=str(tmp_path),
-        model="gemini-3.1-flash-lite",
+        model="deepseek-chat",
         languages=["en"],
         no_save=False,
         quiet=True

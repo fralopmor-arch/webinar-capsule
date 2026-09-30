@@ -5,7 +5,9 @@ import streamlit as st
 from youtube_summarizer.transcript import parse_video_id, get_transcript, transcribe_audio_fallback, get_video_title
 from youtube_summarizer.sanitizer import sanitize_transcript
 from youtube_summarizer.storage import save_transcript, save_summary, load_transcript, transcript_exists, SUMMARIES_DIR
-from youtube_summarizer.summarizer import GeminiSummarizer
+from youtube_summarizer.summarizer import DeepSeekSummarizer
+from youtube_summarizer.docx_export import markdown_to_docx
+from youtube_summarizer.html_export import generate_html_capsule
 
 # Page configuration
 st.set_page_config(
@@ -64,18 +66,8 @@ with st.sidebar:
     st.header("Workspace Settings")
     st.space("small")
     
-    selected_model = st.selectbox(
-        "Gemini model",
-        options=[
-            "gemini-3.1-flash-lite",
-            "gemini-3.6-flash",
-            "gemini-2.5-flash",
-            "gemini-3.5-flash-lite",
-            "gemini-2.5-pro"
-        ],
-        index=0,
-        help="Select the Google Gemini model to process and summarize the transcript."
-    )
+    # Fixed backend model
+    selected_model = "deepseek-chat"
     
     available_languages = st.pills(
         "Preferred caption languages",
@@ -227,11 +219,11 @@ if start_button and video_url.strip():
             
             st.session_state["transcript_result"] = transcript_text
             
-            # 3. Summarize with Gemini (85%)
+            # 3. Summarize with DeepSeek (85%)
             progress_bar.progress(85, text=f"🤖 Synthesizing AI executive summary via {selected_model} (85%)...")
             summary_lang = langs[0] if langs else "es"
             st.write(f"🤖 **Generating AI summary in `{summary_lang}` using `{selected_model}`...**")
-            summarizer = GeminiSummarizer(model_name=selected_model)
+            summarizer = DeepSeekSummarizer(model_name=selected_model)
             summary = summarizer.generate_summary(transcript_text, target_language=summary_lang)
             
             if not no_save_option:
@@ -260,8 +252,8 @@ if start_button and video_url.strip():
             st.error(f"Error: {str(e)}", icon=":material/error:")
             if "FFmpeg" in str(e):
                 st.info("Tip: Install FFmpeg to enable audio downloading and Whisper transcription.", icon=":material/lightbulb:")
-            elif "API_KEY" in str(e) or "400" in str(e) or "403" in str(e):
-                st.info("Tip: Check your GEMINI_API_KEY setting in the environment/.env file.", icon=":material/lightbulb:")
+            elif "API_KEY" in str(e) or "400" in str(e) or "401" in str(e) or "403" in str(e):
+                st.info("Tip: Check your DEEPSEEK_API_KEY setting in the environment/.env file.", icon=":material/lightbulb:")
 
 
 
@@ -317,9 +309,41 @@ with st.container(border=True):
             meta = st.session_state.get("pipeline_metadata", {})
             
             st.subheader("Download Files")
-            col_dl1, col_dl2, col_dl3 = st.columns(3)
+            col_dl1, col_dl2, col_dl3, col_dl4, col_dl5 = st.columns(5)
             
             with col_dl1:
+                html_capsule = generate_html_capsule(
+                    video_id=vid_id,
+                    title=title,
+                    summary_markdown=st.session_state["summary_result"],
+                    transcript=st.session_state["transcript_result"],
+                    metadata=meta
+                )
+                st.download_button(
+                    label="Download Video (.html)",
+                    data=html_capsule,
+                    file_name=f"{vid_id}_capsule.html",
+                    mime="text/html",
+                    icon=":material/html:",
+                    width="stretch",
+                    help="Interactive HTML dossier with embedded YouTube video playback, formatted AI summary, and transcript."
+                )
+
+            with col_dl2:
+                docx_buffer = markdown_to_docx(
+                    st.session_state["summary_result"],
+                    title=title
+                )
+                st.download_button(
+                    label="Download Summary (.docx)",
+                    data=docx_buffer.getvalue(),
+                    file_name=f"{vid_id}_summary.docx",
+                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    icon=":material/article:",
+                    width="stretch"
+                )
+
+            with col_dl3:
                 st.download_button(
                     label="Download Summary (.md)",
                     data=st.session_state["summary_result"],
@@ -329,13 +353,13 @@ with st.container(border=True):
                     width="stretch"
                 )
                 
-            with col_dl2:
+            with col_dl4:
                 st.download_button(
                     label="Download Transcript (.txt)",
                     data=st.session_state["transcript_result"],
                     file_name=f"{vid_id}_transcript.txt",
                     mime="text/plain",
-                    icon=":material/article:",
+                    icon=":material/notes:",
                     width="stretch"
                 )
                 
@@ -348,9 +372,9 @@ with st.container(border=True):
             }
             json_str = json.dumps(json_export_data, indent=2, ensure_ascii=False)
             
-            with col_dl3:
+            with col_dl5:
                 st.download_button(
-                    label="Download Full Package (.json)",
+                    label="Download Bundle (.json)",
                     data=json_str,
                     file_name=f"{vid_id}_bundle.json",
                     mime="application/json",

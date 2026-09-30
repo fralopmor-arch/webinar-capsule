@@ -14,7 +14,7 @@ from rich.theme import Theme
 from .transcript import parse_video_id, get_transcript, transcribe_audio_fallback, get_video_title
 from .sanitizer import sanitize_transcript
 from .storage import save_transcript, save_summary, load_transcript, transcript_exists, SUMMARIES_DIR
-from .summarizer import GeminiSummarizer
+from .summarizer import DeepSeekSummarizer
 
 # Reconfigure stdout/stderr encoding to UTF-8 on Windows to prevent UnicodeEncodeError
 if sys.platform == "win32":
@@ -132,12 +132,12 @@ def run_pipeline(url: str, output_dir: str, model: str, languages: list, no_save
             
         # 6. Summarize
         if not quiet:
-            status_text = f"[progress]Generating summary with Gemini ({model})...[/]"
+            status_text = f"[progress]Generating summary with DeepSeek ({model})...[/]"
             with console.status(status_text, spinner="dots"):
-                summarizer = GeminiSummarizer(model_name=model)
+                summarizer = DeepSeekSummarizer(model_name=model)
                 summary = summarizer.generate_summary(transcript_text)
         else:
-            summarizer = GeminiSummarizer(model_name=model)
+            summarizer = DeepSeekSummarizer(model_name=model)
             summary = summarizer.generate_summary(transcript_text)
         
         # 7. Save & Display Summary
@@ -162,15 +162,15 @@ def run_pipeline(url: str, output_dir: str, model: str, languages: list, no_save
             err_console.print(f"\n[bold red]Error:[/] [error]{str(e)}[/]")
             if "FFmpeg" in str(e):
                 err_console.print("\n[warning]Suggestion: Install FFmpeg via 'winget install \"FFmpeg (Essentials Build)\"'[/]")
-            elif "API_KEY" in str(e) or "400" in str(e) or "403" in str(e):
-                err_console.print("\n[warning]Suggestion: Check your GEMINI_API_KEY in the .env file.[/]")
+            elif "API_KEY" in str(e) or "400" in str(e) or "401" in str(e) or "403" in str(e):
+                err_console.print("\n[warning]Suggestion: Check your DEEPSEEK_API_KEY in the .env file.[/]")
         sys.exit(1)
 
 def main():
-    parser = argparse.ArgumentParser(description="YouTube Video Summarizer using Gemini")
+    parser = argparse.ArgumentParser(description="YouTube Video Summarizer using DeepSeek")
     parser.add_argument("url", help="YouTube video URL")
     parser.add_argument("--output-dir", default=str(SUMMARIES_DIR), help="Directory to save summaries (default: summaries/)")
-    parser.add_argument("--model", default="gemini-3.1-flash-lite", help="Gemini model to use (default: gemini-3.1-flash-lite)")
+    parser.add_argument("--model", default="deepseek-chat", help="DeepSeek model to use (default: deepseek-chat)")
     parser.add_argument("--language", default="es,en,fr,de,it", help="Comma-separated language codes for captions (default: es,en,fr,de,it)")
     parser.add_argument("--no-save", action="store_true", help="Do not save transcript or summary to disk")
     parser.add_argument("--verbose", action="store_true", help="Enable verbose logging")

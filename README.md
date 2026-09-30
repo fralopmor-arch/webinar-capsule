@@ -14,7 +14,7 @@ Webinar Capsule is a premium, developer-friendly tool that solves the problem of
 
 - **🌐 Smart Multi-Language Caption Retrieval**: Automatically queries YouTube transcripts prioritizing configurable languages (e.g. Spanish, English, French, German, Italian).
 - **🎙️ Automatic Local Whisper Fallback**: If a video lacks captions, Webinar Capsule automatically downloads the audio stream and transcribes it locally using `faster-whisper`.
-- **🤖 Modular LLM Integration**: Comes built-in with Google Gemini support (e.g., `gemini-3.1-flash-lite`, `gemini-2.5-pro` with automatic exponential backoff retry logic) and is prepared for OpenAI / Anthropic models.
+- **🤖 Modular LLM Integration**: Built with DeepSeek support (e.g., `deepseek-chat`, `deepseek-reasoner` with automatic exponential backoff retry logic) using high quality synthesis prompts.
 - **💾 Local Caching & Supabase Sync**: Saves raw transcripts and formatted summaries locally to avoid redundant API hits. Can seamlessly back up to Supabase database.
 - **🖥️ Responsive UI & CLI**: Run it through an interactive, glassmorphic Streamlit Dashboard or directly via the command line interface.
 
@@ -47,11 +47,7 @@ cp .env.example .env
 Open `.env` and fill in your keys:
 ```env
 # Required for primary summarization
-GEMINI_API_KEY=AIzaSy...
-
-# Optional: Swap or extend the pipeline with other providers
-OPENAI_API_KEY=sk-proj-...
-ANTHROPIC_API_KEY=sk-ant-...
+DEEPSEEK_API_KEY=sk-...
 
 # Optional: Sync transcripts and summaries to a Supabase database
 SUPABASE_URL=https://...
@@ -81,7 +77,7 @@ uv run youtube-summarizer "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
 # Advanced run specifying language priority and custom model
 uv run youtube-summarizer "https://youtu.be/dQw4w9WgXcQ" \
     --output-dir my_summaries/ \
-    --model gemini-2.5-pro \
+    --model deepseek-chat \
     --language en,es \
     --verbose
 ```
@@ -91,7 +87,7 @@ uv run youtube-summarizer "https://youtu.be/dQw4w9WgXcQ" \
 |---|---|---|
 | `url` | **Required** YouTube video URL. | - |
 | `--output-dir` | Directory where transcripts and summaries are saved. | `summaries/` |
-| `--model` | LLM model to use. | `gemini-3.1-flash-lite` |
+| `--model` | LLM model to use. | `deepseek-chat` |
 | `--language` | Comma-separated languages to prioritize. | `es,en,fr,de,it` |
 | `--no-save` | Disable caching and filesystem persistence. | `False` |
 | `--verbose` | Output detailed execution logs to stdout. | `False` |

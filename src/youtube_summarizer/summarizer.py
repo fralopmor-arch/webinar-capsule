@@ -1,9 +1,8 @@
 import logging
-from google import genai
-from google.genai import types
-from google.genai.errors import APIError
+import openai
+from openai import APIError, APIStatusError, RateLimitError, APIConnectionError, InternalServerError
 from tenacity import retry, stop_after_attempt, wait_exponential_jitter, retry_if_exception
-from .config import get_gemini_api_key
+from .config import get_deepseek_api_key
 
 logger = logging.getLogger(__name__)
 
@@ -38,17 +37,23 @@ Please summarize the transcript above according to your system instructions. Be 
 """
 
 def should_retry_api_error(exception: Exception) -> bool:
+    if isinstance(exception, (RateLimitError, APIConnectionError, InternalServerError)):
+        return True
+    if isinstance(exception, APIStatusError):
+        status_code = getattr(exception, 'status_code', None)
+        if status_code in (429, 500, 502, 503, 504):
+            return True
     if isinstance(exception, APIError):
-        # APIError in google-genai usually has a 'code' attribute for HTTP status
-        status_code = getattr(exception, 'code', None)
+        status_code = getattr(exception, 'code', None) or getattr(exception, 'status_code', None)
         if status_code in (429, 500, 502, 503, 504):
             return True
     return False
 
-class GeminiSummarizer:
-    def __init__(self, model_name: str = "gemini-3.1-flash-lite"):
-        api_key = get_gemini_api_key()
-        self.client = genai.Client(api_key=api_key)
+class DeepSeekSummarizer:
+    def __init__(self, model_name: str = "deepseek-chat", api_key: str | None = None, base_url: str = "https://api.deepseek.com"):
+        if api_key is None:
+            api_key = get_deepseek_api_key()
+        self.client = openai.OpenAI(api_key=api_key, base_url=base_url)
         self.model_name = model_name
 
     @retry(
@@ -59,7 +64,7 @@ class GeminiSummarizer:
     )
     def generate_summary(self, transcript_text: str, target_language: str = "es") -> str:
         """
-        Sends the transcript to Gemini for summarization.
+        Sends the transcript to DeepSeek for summarization.
         Uses exponential backoff with jitter for transient errors and rate limits.
         """
         lang_names = {
@@ -91,17 +96,20 @@ class GeminiSummarizer:
             f"Do not extrapolate or introduce external facts. Base your response strictly on the provided transcript."
         )
         
-        prompt = USER_PROMPT_TEMPLATE.format(transcript=transcript_text)
+        user_content = USER_PROMPT_TEMPLATE.format(transcript=transcript_text)
         
         try:
-            response = self.client.models.generate_content(
+            response = self.client.chat.completions.create(
                 model=self.model_name,
-                contents=prompt,
-                config=types.GenerateContentConfig(
-                    system_instruction=dynamic_instruction,
-                )
+                messages=[
+                    {"role": "system", "content": dynamic_instruction},
+                    {"role": "user", "content": user_content}
+                ]
             )
-            return response.text
+            return response.choices[0].message.content or ""
         except Exception as e:
-            logger.warning(f"Error during Gemini API call: {e}")
+            logger.warning(f"Error during DeepSeek API call: {e}")
             raise
+
+# Backward compatibility alias
+GeminiSummarizer = DeepSeekSummarizer
